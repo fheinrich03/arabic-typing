@@ -1,15 +1,18 @@
-import type { LessonResult } from "../types";
+import type { Lesson, LessonResult } from "../types";
 import { PASS_ERROR_RATE } from "../hooks/useLessonEngine";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
+import { Separator } from "./ui/separator";
 
 interface StatsPanelProps {
   result: LessonResult;
+  nextLesson?: Lesson;
   onRetry: () => void;
   onBack: () => void;
+  onNext: () => void;
 }
 
-export function StatsPanel({ result, onRetry, onBack }: StatsPanelProps) {
+export function StatsPanel({ result, nextLesson, onRetry, onBack, onNext }: StatsPanelProps) {
   return (
     <Card className="mx-auto max-w-sm text-center">
       <CardContent>
@@ -48,6 +51,20 @@ export function StatsPanel({ result, onRetry, onBack }: StatsPanelProps) {
             Zur Übersicht
           </Button>
         </div>
+
+        {nextLesson && (
+          <>
+            <Separator className="my-5" />
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Nächste Übung: <span className="text-foreground">{nextLesson.title}</span>
+              </p>
+              <Button onClick={onNext} className="w-full">
+                Übung beginnen
+              </Button>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

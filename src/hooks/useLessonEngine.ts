@@ -37,20 +37,21 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
   }, []);
 
   const typeChar = useCallback(
-    (char: string) => {
+    (input: string) => {
       setState((prev) => {
         if (prev.finishedAt !== null || prev.currentIndex >= textRef.current.length) {
           return prev;
         }
-        const target = textRef.current[prev.currentIndex];
-        const isCorrect = char === target;
+        const span = input.length;
+        const target = textRef.current.slice(prev.currentIndex, prev.currentIndex + span);
+        const isCorrect = input === target;
         const startedAt = prev.startedAt ?? Date.now();
         const keystrokes = prev.keystrokes + 1;
 
         if (isCorrect) {
           const charStates = [...prev.charStates];
-          charStates[prev.currentIndex] = "correct";
-          const currentIndex = prev.currentIndex + 1;
+          for (let i = 0; i < span; i++) charStates[prev.currentIndex + i] = "correct";
+          const currentIndex = prev.currentIndex + span;
           const finishedAt =
             currentIndex >= textRef.current.length ? Date.now() : null;
           return {
@@ -68,8 +69,10 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
 
         if (errorMode === "permissive") {
           const charStates = [...prev.charStates];
-          charStates[prev.currentIndex] = "incorrect";
-          const currentIndex = prev.currentIndex + 1;
+          for (let i = 0; i < span && prev.currentIndex + i < charStates.length; i++) {
+            charStates[prev.currentIndex + i] = "incorrect";
+          }
+          const currentIndex = prev.currentIndex + span;
           const finishedAt =
             currentIndex >= textRef.current.length ? Date.now() : null;
           return {
@@ -84,7 +87,7 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
           };
         }
 
-        // strict: stay on the same character
+        // strict: stay on the same character(s)
         return {
           ...prev,
           startedAt,

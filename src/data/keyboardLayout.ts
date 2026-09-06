@@ -1,66 +1,129 @@
 import type { KeyDef } from "../types";
 
 /**
- * Reference layout: macOS "Arabic" keyboard (matches Windows "Arabic (101)"
- * for base letters). Used to look up which physical key + finger produces a
- * given Arabic character, for the on-screen keyboard and finger hints.
+ * Reference layout: macOS "Arabic" keyboard (base letters match Windows
+ * "Arabic (101)"). Used to look up which physical key + finger produces a
+ * given Arabic character, for the on-screen keyboard and finger hints, and
+ * to translate physical keydowns into Arabic characters directly (see
+ * CODE_TO_ARABIC / CODE_TO_ARABIC_SHIFT) — the learner never needs an
+ * Arabic input source active in the OS.
  *
- * Keyed by KeyboardEvent.code so the app works no matter which layout the
- * OS actually has active — the trainer assumes the learner has an Arabic
- * input source enabled and compares the resulting typed character, while
- * this table only drives the visual guide.
+ * Shift-layer mapping (hamza/alif forms, ligatures, diacritics, digits,
+ * punctuation) per the standard Arabic 101 layout; the Shadda position
+ * (Backquote+Shift) is a best-effort placement, unverified against a real
+ * Mac — flag if it doesn't match your keyboard.
  */
-export const KEY_ROWS: KeyDef[][] = [
-  [
-    { code: "KeyQ", arabic: "ض", finger: "l-pinky", row: 0 },
-    { code: "KeyW", arabic: "ص", finger: "l-ring", row: 0 },
-    { code: "KeyE", arabic: "ث", finger: "l-middle", row: 0 },
-    { code: "KeyR", arabic: "ق", finger: "l-index", row: 0 },
-    { code: "KeyT", arabic: "ف", finger: "l-index", row: 0 },
-    { code: "KeyY", arabic: "غ", finger: "r-index", row: 0 },
-    { code: "KeyU", arabic: "ع", finger: "r-index", row: 0 },
-    { code: "KeyI", arabic: "ه", finger: "r-middle", row: 0 },
-    { code: "KeyO", arabic: "خ", finger: "r-ring", row: 0 },
-    { code: "KeyP", arabic: "ح", finger: "r-pinky", row: 0 },
-    { code: "BracketLeft", arabic: "ج", finger: "r-pinky", row: 0 },
-    { code: "BracketRight", arabic: "د", finger: "r-pinky", row: 0 },
-  ],
-  [
-    { code: "KeyA", arabic: "ش", finger: "l-pinky", row: 1 },
-    { code: "KeyS", arabic: "س", finger: "l-ring", row: 1 },
-    { code: "KeyD", arabic: "ي", finger: "l-middle", row: 1 },
-    { code: "KeyF", arabic: "ب", finger: "l-index", row: 1 },
-    { code: "KeyG", arabic: "ل", finger: "l-index", row: 1 },
-    { code: "KeyH", arabic: "ا", finger: "r-index", row: 1 },
-    { code: "KeyJ", arabic: "ت", finger: "r-index", row: 1 },
-    { code: "KeyK", arabic: "ن", finger: "r-middle", row: 1 },
-    { code: "KeyL", arabic: "م", finger: "r-ring", row: 1 },
-    { code: "Semicolon", arabic: "ك", finger: "r-pinky", row: 1 },
-    { code: "Quote", arabic: "ط", finger: "r-pinky", row: 1 },
-  ],
-  [
-    { code: "KeyZ", arabic: "ئ", finger: "l-pinky", row: 2 },
-    { code: "KeyX", arabic: "ء", finger: "l-ring", row: 2 },
-    { code: "KeyC", arabic: "ؤ", finger: "l-middle", row: 2 },
-    { code: "KeyV", arabic: "ر", finger: "l-index", row: 2 },
-    { code: "KeyB", arabic: "لا", finger: "l-index", row: 2 },
-    { code: "KeyN", arabic: "ى", finger: "r-index", row: 2 },
-    { code: "KeyM", arabic: "ة", finger: "r-index", row: 2 },
-    { code: "Comma", arabic: "و", finger: "r-middle", row: 2 },
-    { code: "Period", arabic: "ز", finger: "r-ring", row: 2 },
-    { code: "Slash", arabic: "ظ", finger: "r-pinky", row: 2 },
-  ],
-  [{ code: "Space", arabic: " ", finger: "thumb", row: 3, width: 6 }],
+export const NUMBER_ROW: KeyDef[] = [
+  { code: "Backquote", arabic: "ذ", shiftArabic: "ّ", finger: "l-pinky", row: -1 },
+  { code: "Digit1", arabic: "١", finger: "l-pinky", row: -1 },
+  { code: "Digit2", arabic: "٢", finger: "l-ring", row: -1 },
+  { code: "Digit3", arabic: "٣", finger: "l-middle", row: -1 },
+  { code: "Digit4", arabic: "٤", finger: "l-index", row: -1 },
+  { code: "Digit5", arabic: "٥", finger: "l-index", row: -1 },
+  { code: "Digit6", arabic: "٦", finger: "r-index", row: -1 },
+  { code: "Digit7", arabic: "٧", finger: "r-index", row: -1 },
+  { code: "Digit8", arabic: "٨", finger: "r-middle", row: -1 },
+  { code: "Digit9", arabic: "٩", finger: "r-ring", row: -1 },
+  { code: "Digit0", arabic: "٠", finger: "r-pinky", row: -1 },
 ];
 
-export const ALL_KEYS: KeyDef[] = KEY_ROWS.flat();
+export const TOP_ROW: KeyDef[] = [
+  { code: "KeyQ", arabic: "ض", shiftArabic: "َ", finger: "l-pinky", row: 0 },
+  { code: "KeyW", arabic: "ص", shiftArabic: "ً", finger: "l-ring", row: 0 },
+  { code: "KeyE", arabic: "ث", shiftArabic: "ُ", finger: "l-middle", row: 0 },
+  { code: "KeyR", arabic: "ق", shiftArabic: "ٌ", finger: "l-index", row: 0 },
+  { code: "KeyT", arabic: "ف", shiftArabic: "لإ", finger: "l-index", row: 0 },
+  { code: "KeyY", arabic: "غ", shiftArabic: "إ", finger: "r-index", row: 0 },
+  { code: "KeyU", arabic: "ع", finger: "r-index", row: 0 },
+  { code: "KeyI", arabic: "ه", finger: "r-middle", row: 0 },
+  { code: "KeyO", arabic: "خ", finger: "r-ring", row: 0 },
+  { code: "KeyP", arabic: "ح", shiftArabic: "؛", finger: "r-pinky", row: 0 },
+  { code: "BracketLeft", arabic: "ج", finger: "r-pinky", row: 0 },
+  { code: "BracketRight", arabic: "د", finger: "r-pinky", row: 0 },
+];
+
+export const HOME_ROW: KeyDef[] = [
+  { code: "KeyA", arabic: "ش", shiftArabic: "ِ", finger: "l-pinky", row: 1 },
+  { code: "KeyS", arabic: "س", shiftArabic: "ٍ", finger: "l-ring", row: 1 },
+  { code: "KeyD", arabic: "ي", finger: "l-middle", row: 1 },
+  { code: "KeyF", arabic: "ب", finger: "l-index", row: 1 },
+  { code: "KeyG", arabic: "ل", shiftArabic: "لأ", finger: "l-index", row: 1 },
+  { code: "KeyH", arabic: "ا", shiftArabic: "أ", finger: "r-index", row: 1 },
+  { code: "KeyJ", arabic: "ت", shiftArabic: "ـ", finger: "r-index", row: 1 },
+  { code: "KeyK", arabic: "ن", shiftArabic: "،", finger: "r-middle", row: 1 },
+  { code: "KeyL", arabic: "م", finger: "r-ring", row: 1 },
+  { code: "Semicolon", arabic: "ك", finger: "r-pinky", row: 1 },
+  { code: "Quote", arabic: "ط", finger: "r-pinky", row: 1 },
+];
+
+export const BOTTOM_ROW: KeyDef[] = [
+  { code: "KeyZ", arabic: "ئ", finger: "l-pinky", row: 2 },
+  { code: "KeyX", arabic: "ء", shiftArabic: "ْ", finger: "l-ring", row: 2 },
+  { code: "KeyC", arabic: "ؤ", finger: "l-middle", row: 2 },
+  { code: "KeyV", arabic: "ر", finger: "l-index", row: 2 },
+  { code: "KeyB", arabic: "لا", shiftArabic: "لآ", finger: "l-index", row: 2 },
+  { code: "KeyN", arabic: "ى", shiftArabic: "آ", finger: "r-index", row: 2 },
+  { code: "KeyM", arabic: "ة", finger: "r-index", row: 2 },
+  { code: "Comma", arabic: "و", finger: "r-middle", row: 2 },
+  { code: "Period", arabic: "ز", finger: "r-ring", row: 2 },
+  { code: "Slash", arabic: "ظ", shiftArabic: "؟", finger: "r-pinky", row: 2 },
+];
+
+export const SPACE_KEY: KeyDef = { code: "Space", arabic: " ", finger: "thumb", row: 3, width: 6 };
+
+export const KEY_ROWS: KeyDef[][] = [NUMBER_ROW, TOP_ROW, HOME_ROW, BOTTOM_ROW];
+
+export const ALL_KEYS: KeyDef[] = [...KEY_ROWS.flat(), SPACE_KEY];
 
 export const CHAR_TO_KEY: Record<string, KeyDef> = Object.fromEntries(
-  ALL_KEYS.map((k) => [k.arabic, k]),
+  ALL_KEYS.filter((k) => k.arabic).map((k) => [k.arabic, k]),
+);
+
+export const SHIFT_CHAR_TO_KEY: Record<string, KeyDef> = Object.fromEntries(
+  ALL_KEYS.filter((k) => k.shiftArabic).map((k) => [k.shiftArabic!, k]),
 );
 
 export function keyForChar(char: string): KeyDef | undefined {
-  return CHAR_TO_KEY[char];
+  return CHAR_TO_KEY[char] ?? SHIFT_CHAR_TO_KEY[char];
+}
+
+export const CODE_TO_ARABIC: Record<string, string> = Object.fromEntries(
+  ALL_KEYS.filter((k) => k.arabic).map((k) => [k.code, k.arabic]),
+);
+
+export const CODE_TO_ARABIC_SHIFT: Record<string, string> = Object.fromEntries(
+  ALL_KEYS.filter((k) => k.shiftArabic).map((k) => [k.code, k.shiftArabic!]),
+);
+
+/** Multi-char keys (ligatures), longest-first, for lookahead matching. */
+const MULTI_CHAR_KEYS = ALL_KEYS.flatMap((k) => {
+  const entries: { token: string; key: KeyDef; isShift: boolean }[] = [];
+  if (k.arabic.length > 1) entries.push({ token: k.arabic, key: k, isShift: false });
+  if (k.shiftArabic && k.shiftArabic.length > 1) {
+    entries.push({ token: k.shiftArabic, key: k, isShift: true });
+  }
+  return entries;
+}).sort((a, b) => b.token.length - a.token.length);
+
+/**
+ * Resolves the next key the learner should press at `text[index]`,
+ * accounting for multi-character ligature keys (e.g. "لا") that must be
+ * matched as a whole rather than one codepoint at a time.
+ */
+export function resolveNextKey(
+  text: string,
+  index: number,
+): { token: string; key: KeyDef; isShift: boolean } | undefined {
+  for (const candidate of MULTI_CHAR_KEYS) {
+    if (text.startsWith(candidate.token, index)) return candidate;
+  }
+  const char = text[index];
+  if (char === undefined) return undefined;
+  const key = CHAR_TO_KEY[char];
+  if (key) return { token: char, key, isShift: false };
+  const shiftKey = SHIFT_CHAR_TO_KEY[char];
+  if (shiftKey) return { token: char, key: shiftKey, isShift: true };
+  return undefined;
 }
 
 export const FINGER_COLORS: Record<KeyDef["finger"], string> = {
@@ -89,26 +152,39 @@ export const FINGER_LABELS: Record<KeyDef["finger"], string> = {
 
 /** Home row letters, in finger-training order (Tipp10-style progression). */
 export const HOME_ROW_GROUPS: string[][] = [
-  ["ب", "ت"], // F J
-  ["ي", "ن"], // D K
-  ["س", "م"], // S L
-  ["ش", "ك"], // A ;
-  ["ل", "ا"], // G H
+  ["ت"],
+  ["ن"],
+  ["م"],
+  ["ك"],
+  ["ا"],
+  ["ب"],
+  ["ل"],
+  ["ي"],
+  ["س"],
+  ["ش"],
 ];
 
 export const TOP_ROW_GROUPS: string[][] = [
-  ["ف", "ع"], // T U
-  ["ث", "ه"], // E I
-  ["ص", "خ"], // W O
-  ["ض", "ح"], // Q P
-  ["ق", "غ"], // R Y
-  ["ج", "د"], // [ ]
+  ["ع"],
+  ["غ"],
+  ["ه"],
+  ["خ"],
+  ["ح"],
+  ["ج"],
+  ["ف"],
+  ["ق"],
+  ["ث"],
+  ["ص"],
+  ["ض"],
+  ["ة"],
 ];
 
 export const BOTTOM_ROW_GROUPS: string[][] = [
-  ["ر", "و"], // V ,
-  ["لا", "ز"], // B .
-  ["ئ", "ى"], // Z N
-  ["ء", "ة"], // X M
-  ["ؤ", "ظ"], // C /
+  ["ط"],
+  ["ظ"],
+  ["ذ"],
+  ["د"],
+  ["ز"],
+  ["ر"],
+  ["و"],
 ];

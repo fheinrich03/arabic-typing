@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SettingsIcon } from "lucide-react";
-import { LESSONS_BY_ID, ALL_LETTERS } from "./data/lessons";
+import { LESSONS_BY_ID, BASE_LETTERS } from "./data/lessons";
 import type { Lesson } from "./types";
 import { useSettings } from "./hooks/useSettings";
 import { useProgress } from "./hooks/useProgress";
@@ -13,9 +13,9 @@ const FREE_PRACTICE_LESSON: Lesson = {
   id: "free",
   title: "Freies Training",
   chapterId: "free",
-  chars: ALL_LETTERS,
+  chars: BASE_LETTERS,
   mode: "chars",
-  generatorConfig: { letters: ALL_LETTERS, length: 250 },
+  generatorConfig: { letters: BASE_LETTERS, length: 250 },
 };
 
 function App() {
@@ -47,10 +47,12 @@ function App() {
       <main className="px-4">
         {activeLesson ? (
           <LessonRunner
+            key={activeLessonId}
             lesson={activeLesson}
             settings={settings}
             onFinish={recordResult}
             onBack={() => setActiveLessonId(null)}
+            onNavigate={setActiveLessonId}
           />
         ) : (
           <LessonList

@@ -25,13 +25,29 @@ function generatePseudoWord(letters: string[], weights: Record<string, number>):
   return word;
 }
 
+/** Generates a pseudo-word of 2-3 (base letter + diacritic mark) pairs. */
+function generatePseudoPairWord(
+  pairBase: string[],
+  marks: string[],
+  weights: Record<string, number>,
+): string {
+  const pairs = 2 + Math.floor(Math.random() * 2);
+  let word = "";
+  for (let i = 0; i < pairs; i++) {
+    const base = pairBase[Math.floor(Math.random() * pairBase.length)];
+    const mark = pickWeighted(marks, weights);
+    word += base + mark;
+  }
+  return word;
+}
+
 /**
  * Generates drill text of roughly `length` characters from a config.
  * In word mode, draws real words limited to the allowed letters (falls
  * back to pseudo-words if too few matching words exist).
  */
 export function generateDrillText(config: GeneratorConfig): string {
-  const { letters, length, wordMode = false, repeatWeight = {} } = config;
+  const { letters, length, wordMode = false, repeatWeight = {}, pairBase } = config;
   if (letters.length === 0) return "";
 
   const letterSet = new Set(letters);
@@ -45,7 +61,9 @@ export function generateDrillText(config: GeneratorConfig): string {
     const token =
       candidateWords.length > 0
         ? candidateWords[Math.floor(Math.random() * candidateWords.length)]
-        : generatePseudoWord(letters, repeatWeight);
+        : pairBase
+          ? generatePseudoPairWord(pairBase, letters, repeatWeight)
+          : generatePseudoWord(letters, repeatWeight);
     tokens.push(token);
     charCount += token.length;
   }

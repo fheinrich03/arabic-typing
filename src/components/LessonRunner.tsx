@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import type { Lesson, LessonResult, Settings } from "../types";
 import { resolveLessonText } from "../lib/lessonGenerator";
+import { getNextLesson } from "../data/lessons";
 import { useLessonEngine } from "../hooks/useLessonEngine";
 import { KeyboardView } from "./KeyboardView";
 import { TypingArea } from "./TypingArea";
@@ -13,9 +14,16 @@ interface LessonRunnerProps {
   settings: Settings;
   onFinish: (result: LessonResult) => void;
   onBack: () => void;
+  onNavigate: (lessonId: string) => void;
 }
 
-export function LessonRunner({ lesson, settings, onFinish, onBack }: LessonRunnerProps) {
+export function LessonRunner({
+  lesson,
+  settings,
+  onFinish,
+  onBack,
+  onNavigate,
+}: LessonRunnerProps) {
   const [attempt, setAttempt] = useState(0);
   const text = useMemo(
     () => resolveLessonText(lesson),
@@ -36,16 +44,17 @@ export function LessonRunner({ lesson, settings, onFinish, onBack }: LessonRunne
   }, [engine.isFinished, engine.result, lesson.id, onFinish]);
 
   if (engine.isFinished && engine.result) {
+    const nextLesson = getNextLesson(lesson.id);
     return (
       <StatsPanel
         result={{ ...engine.result, lessonId: lesson.id }}
+        nextLesson={nextLesson}
         onRetry={() => setAttempt((a) => a + 1)}
         onBack={onBack}
+        onNext={() => nextLesson && onNavigate(nextLesson.id)}
       />
     );
   }
-
-  const target = text[engine.currentIndex];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -69,7 +78,11 @@ export function LessonRunner({ lesson, settings, onFinish, onBack }: LessonRunne
       />
 
       {settings.showKeyboard && (
-        <KeyboardView targetChar={target} showFingerHints={settings.showFingerHints} />
+        <KeyboardView
+          text={text}
+          currentIndex={engine.currentIndex}
+          showFingerHints={settings.showFingerHints}
+        />
       )}
     </div>
   );

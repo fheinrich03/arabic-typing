@@ -1,8 +1,6 @@
 /**
  * Curated common Arabic words, undiacritized (no tashkil), restricted to
- * letters reachable on the reference keyboard layout (see keyboardLayout.ts)
- * — in particular avoiding alif-with-hamza forms (أ إ آ), which aren't
- * mapped in the MVP letter-row-only keyboard.
+ * letters reachable on the reference keyboard layout (see keyboardLayout.ts).
  */
 export const WORDS: string[] = [
   // Zuhause & Alltag
@@ -45,3 +43,16 @@ export const SENTENCES: string[] = [
   "الطالب يكتب درس جديد",
   "الطير فوق الشجرة",
 ];
+
+/** Unit 7 "Real-World Texts" — undiacritized, using the full alphabet. */
+export const REAL_TEXTS: Record<string, string> = {
+  greetings:
+    "السلام عليكم، كيف حالك؟ الحمد لله، بخير. أهلا وسهلا، تشرفنا. مع السلامة، إلى اللقاء.",
+  "daily-life":
+    "أستيقظ باكرا كل يوم. أشرب الشاي وأتناول الفطور. أذهب إلى العمل بالسيارة. أعود إلى البيت مساء وأتناول العشاء مع عائلتي.",
+  numbers:
+    "عندي ٣ كتب و٥ أقلام. الساعة الآن ٧ مساء. عمري ٢٥ سنة. اشتريت ١٠ تفاحات و٢ كيلو موز.",
+  questions: "ما اسمك؟ من أين أنت؟ كم الساعة الآن؟ هل تتكلم العربية؟ أين تسكن؟",
+  story:
+    "في يوم من الأيام، ذهب ولد صغير إلى الحديقة. رأى شجرة كبيرة وتحتها قطة نائمة. جلس الولد بجانب القطة وبدأ يقرأ كتابه. كانت الشمس دافئة والجو جميلا.",
+};
