@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@import "@fontsource/noto-naskh-arabic/400.css";
+@import "@fontsource/noto-naskh-arabic/700.css";
+
+:root {
+  font-family: system-ui, sans-serif;
+}
+
+.font-arabic {
+  font-family: "Noto Naskh Arabic", serif;
+}
