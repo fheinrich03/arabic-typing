@@ -12,9 +12,9 @@ interface TypingAreaProps {
 }
 
 const STATUS_CLASSES: Record<CharStatus, string> = {
-  pending: "text-slate-400 dark:text-slate-500",
-  correct: "text-emerald-600 dark:text-emerald-400",
-  incorrect: "text-red-500 underline decoration-wavy",
+  pending: "text-muted-foreground",
+  correct: "text-accent-green",
+  incorrect: "text-destructive underline decoration-wavy",
 };
 
 export function TypingArea({
@@ -45,7 +45,7 @@ export function TypingArea({
       className="font-arabic leading-relaxed"
       style={{ fontSize: fontSizePx }}
     >
-      <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
+      <div className="rounded-xl bg-card p-6 ring-1 ring-foreground/10">
         {[...text].map((char, i) => {
           const isCurrent = i === currentIndex;
           return (
@@ -54,9 +54,7 @@ export function TypingArea({
               className={`${STATUS_CLASSES[charStates[i]]} ${
                 isCurrent
                   ? `rounded px-0.5 ${
-                      lastKeyWasWrong
-                        ? "bg-red-200 dark:bg-red-900"
-                        : "bg-amber-200 dark:bg-amber-700"
+                      lastKeyWasWrong ? "bg-destructive/30" : "bg-accent-teal/30"
                     }`
                   : ""
               }`}

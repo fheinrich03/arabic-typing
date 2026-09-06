@@ -1,5 +1,7 @@
+import { Dice5Icon } from "lucide-react";
 import { CHAPTERS, LESSONS_BY_ID } from "../data/lessons";
 import type { Progress } from "../types";
+import { Card } from "./ui/card";
 
 interface LessonListProps {
   progress: Progress;
@@ -12,14 +14,15 @@ export function LessonList({ progress, onSelect, onFreePractice }: LessonListPro
     <div className="mx-auto max-w-2xl space-y-8">
       <button
         onClick={onFreePractice}
-        className="w-full rounded-xl border-2 border-dashed border-slate-300 p-4 text-center text-slate-600 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-4 text-center text-muted-foreground transition-colors hover:border-accent-teal hover:text-foreground"
       >
-        🎲 Freies Training — zufälliger Übungstext mit allen Buchstaben
+        <Dice5Icon className="size-5 text-accent-teal" />
+        Freies Training — zufälliger Übungstext mit allen Buchstaben
       </button>
 
       {CHAPTERS.map((chapter) => (
         <section key={chapter.id}>
-          <h2 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">
+          <h2 className="mb-2 font-heading text-lg font-semibold text-foreground">
             {chapter.title}
           </h2>
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -28,23 +31,32 @@ export function LessonList({ progress, onSelect, onFreePractice }: LessonListPro
               const result = progress.results[lessonId];
               return (
                 <li key={lessonId}>
-                  <button
-                    onClick={() => onSelect(lessonId)}
-                    className={`w-full rounded-lg border p-3 text-start text-sm transition-colors ${
-                      result?.passed
-                        ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-900/30"
-                        : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+                  <Card
+                    role="button"
+                    tabIndex={0}
+                    className={`cursor-pointer p-0 transition-colors outline-none hover:ring-accent-teal/50 focus-visible:ring-2 focus-visible:ring-ring ${
+                      result?.passed ? "ring-accent-green/40" : ""
                     }`}
+                    onClick={() => onSelect(lessonId)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelect(lessonId);
+                      }
+                    }}
                   >
-                    <span className="block font-medium text-slate-800 dark:text-slate-100">
-                      {lesson.title}
-                    </span>
-                    {result && (
-                      <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
-                        {result.charsPerMinute} Z/Min · {Math.round(result.errorRate * 100)}% Fehler
+                    <div className="p-3 text-start text-sm">
+                      <span className="block font-medium text-foreground">
+                        {lesson.title}
                       </span>
-                    )}
-                  </button>
+                      {result && (
+                        <span className="mt-1 block font-mono text-xs text-muted-foreground">
+                          {result.charsPerMinute} Z/Min · {Math.round(result.errorRate * 100)}%
+                          Fehler
+                        </span>
+                      )}
+                    </div>
+                  </Card>
                 </li>
               );
             })}

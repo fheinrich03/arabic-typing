@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SettingsIcon } from "lucide-react";
 import { LESSONS_BY_ID, ALL_LETTERS } from "./data/lessons";
 import type { Lesson } from "./types";
 import { useSettings } from "./hooks/useSettings";
@@ -6,6 +7,7 @@ import { useProgress } from "./hooks/useProgress";
 import { LessonList } from "./components/LessonList";
 import { LessonRunner } from "./components/LessonRunner";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { Button } from "./components/ui/button";
 
 const FREE_PRACTICE_LESSON: Lesson = {
   id: "free",
@@ -26,18 +28,20 @@ function App() {
     activeLessonId === "free" ? FREE_PRACTICE_LESSON : activeLessonId ? LESSONS_BY_ID[activeLessonId] : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16 dark:bg-slate-900">
-      <header className="mb-8 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-800/50">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-          ألف باء ⌨️ Arabisch Tippen
+    <div className="min-h-screen bg-dotted-grid pb-16">
+      <header className="mb-8 flex items-center justify-between border-b border-border bg-card/50 px-6 py-4">
+        <h1 className="font-heading text-xl font-bold text-foreground">
+          ألف باء <span className="font-arabic text-accent-teal">تعلّم الطباعة</span>{" "}
+          Arabisch Tippen
         </h1>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setShowSettings(true)}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
           aria-label="Einstellungen"
         >
-          ⚙️
-        </button>
+          <SettingsIcon />
+        </Button>
       </header>
 
       <main className="px-4">
@@ -57,13 +61,12 @@ function App() {
         )}
       </main>
 
-      {showSettings && (
-        <SettingsPanel
-          settings={settings}
-          onChange={setSettings}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
+      <SettingsPanel
+        open={showSettings}
+        onOpenChange={setShowSettings}
+        settings={settings}
+        onChange={setSettings}
+      />
     </div>
   );
 }

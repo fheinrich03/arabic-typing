@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeftIcon } from "lucide-react";
 import type { Lesson, LessonResult, Settings } from "../types";
 import { resolveLessonText } from "../lib/lessonGenerator";
 import { useLessonEngine } from "../hooks/useLessonEngine";
 import { KeyboardView } from "./KeyboardView";
 import { TypingArea } from "./TypingArea";
 import { StatsPanel } from "./StatsPanel";
+import { Button } from "./ui/button";
 
 interface LessonRunnerProps {
   lesson: Lesson;
@@ -48,15 +50,11 @@ export function LessonRunner({ lesson, settings, onFinish, onBack }: LessonRunne
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100"
-        >
-          ← Übersicht
-        </button>
-        <h1 className="text-base font-medium text-slate-700 dark:text-slate-200">
-          {lesson.title}
-        </h1>
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeftIcon />
+          Übersicht
+        </Button>
+        <h1 className="font-heading text-base font-medium text-foreground">{lesson.title}</h1>
         <span className="w-16" />
       </div>
 

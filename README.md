@@ -26,6 +26,14 @@ Build:
 npm run build
 ```
 
+## UI / Design
+
+- shadcn (Preset `nova`, Base UI statt Radix) — Komponenten in
+  `src/components/ui/`
+- Dark-only Farbpalette + Schriftstack (Inter/Space Grotesk/JetBrains Mono +
+  Scheherazade New/Amiri/Noto Naskh Arabic für Arabisch) übernommen vom
+  Design der Referenzseite arabictyping101.com (siehe `docs/PLAN.md`)
+
 ## Struktur
 
 - `src/data/keyboardLayout.ts` — Zeichen-zu-Taste-Mapping + Finger-Zuordnung
