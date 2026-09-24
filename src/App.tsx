@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { SettingsIcon } from "lucide-react";
-import { LESSONS_BY_ID, BASE_LETTERS } from "./data/lessons";
+import { LESSONS, LESSONS_BY_ID, BASE_LETTERS } from "./data/lessons";
 import type { Lesson } from "./types";
 import { useSettings } from "./hooks/useSettings";
 import { useProgress } from "./hooks/useProgress";
@@ -24,8 +24,43 @@ function App() {
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
+  const learnedLetters = useMemo(() => {
+    const seen = new Set<string>();
+    const letters: string[] = [];
+    for (const lesson of LESSONS) {
+      if (!progress.results[lesson.id]?.passed) continue;
+      for (const char of lesson.chars) {
+        if (seen.has(char)) continue;
+        seen.add(char);
+        letters.push(char);
+      }
+    }
+    return letters;
+  }, [progress]);
+
+  const recapLesson: Lesson = {
+    id: "recap",
+    title: "Recap",
+    chapterId: "unit0",
+    chars: learnedLetters,
+    mode: "chars",
+    kind: "review",
+    estimate: "3 min",
+    description:
+      learnedLetters.length > 0
+        ? "Wiederholt alle bisher gelernten Buchstaben"
+        : "Noch keine Buchstaben gelernt",
+    generatorConfig: { letters: learnedLetters, length: 150 },
+  };
+
   const activeLesson =
-    activeLessonId === "free" ? FREE_PRACTICE_LESSON : activeLessonId ? LESSONS_BY_ID[activeLessonId] : null;
+    activeLessonId === "free"
+      ? FREE_PRACTICE_LESSON
+      : activeLessonId === "recap"
+        ? recapLesson
+        : activeLessonId
+          ? LESSONS_BY_ID[activeLessonId]
+          : null;
 
   return (
     <div className="min-h-screen bg-dotted-grid pb-16">
@@ -57,6 +92,7 @@ function App() {
         ) : (
           <LessonList
             progress={progress}
+            recapLesson={recapLesson}
             onSelect={setActiveLessonId}
             onFreePractice={() => setActiveLessonId("free")}
           />

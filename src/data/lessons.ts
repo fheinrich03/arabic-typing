@@ -433,9 +433,9 @@ export const ALL_LETTERS = [...known];
 /** Base alphabet only (units 1-4, no diacritics/digits/punctuation) — used for free practice. */
 export const BASE_LETTERS = [...baseLettersForDiacritics];
 
-/** Next lesson in course order after `lessonId` (course-order includes side quests), if any. */
-export function getNextLesson(lessonId: string): Lesson | undefined {
+/** Up to `count` lessons following `lessonId` in course order (side quests included). */
+export function getNextLessons(lessonId: string, count = 3): Lesson[] {
   const index = LESSONS.findIndex((l) => l.id === lessonId);
-  if (index === -1 || index === LESSONS.length - 1) return undefined;
-  return LESSONS[index + 1];
+  if (index === -1) return [];
+  return LESSONS.slice(index + 1, index + 1 + count);
 }

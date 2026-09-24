@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import type { Lesson, LessonResult, Settings } from "../types";
 import { resolveLessonText } from "../lib/lessonGenerator";
-import { getNextLesson } from "../data/lessons";
+import { getNextLessons } from "../data/lessons";
 import { useLessonEngine } from "../hooks/useLessonEngine";
 import { KeyboardView } from "./KeyboardView";
 import { TypingArea } from "./TypingArea";
@@ -35,6 +35,8 @@ export function LessonRunner({
   const reportedRef = useRef(false);
   useEffect(() => {
     reportedRef.current = false;
+    engine.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson.id, attempt]);
   useEffect(() => {
     if (engine.isFinished && engine.result && !reportedRef.current) {
@@ -44,14 +46,13 @@ export function LessonRunner({
   }, [engine.isFinished, engine.result, lesson.id, onFinish]);
 
   if (engine.isFinished && engine.result) {
-    const nextLesson = getNextLesson(lesson.id);
     return (
       <StatsPanel
         result={{ ...engine.result, lessonId: lesson.id }}
-        nextLesson={nextLesson}
+        nextLessons={getNextLessons(lesson.id)}
         onRetry={() => setAttempt((a) => a + 1)}
         onBack={onBack}
-        onNext={() => nextLesson && onNavigate(nextLesson.id)}
+        onSelectLesson={onNavigate}
       />
     );
   }

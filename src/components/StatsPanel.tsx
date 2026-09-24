@@ -1,3 +1,4 @@
+import { ChevronRightIcon, SparklesIcon } from "lucide-react";
 import type { Lesson, LessonResult } from "../types";
 import { PASS_ERROR_RATE } from "../hooks/useLessonEngine";
 import { Card, CardContent } from "./ui/card";
@@ -6,15 +7,23 @@ import { Separator } from "./ui/separator";
 
 interface StatsPanelProps {
   result: LessonResult;
-  nextLesson?: Lesson;
+  nextLessons: Lesson[];
   onRetry: () => void;
   onBack: () => void;
-  onNext: () => void;
+  onSelectLesson: (lessonId: string) => void;
 }
 
-export function StatsPanel({ result, nextLesson, onRetry, onBack, onNext }: StatsPanelProps) {
+export function StatsPanel({
+  result,
+  nextLessons,
+  onRetry,
+  onBack,
+  onSelectLesson,
+}: StatsPanelProps) {
+  const [recommended, ...upcoming] = nextLessons;
+
   return (
-    <Card className="mx-auto max-w-sm text-center">
+    <Card className="mx-auto max-w-md text-center">
       <CardContent>
         <p
           className={`mb-4 text-lg font-semibold ${
@@ -52,17 +61,46 @@ export function StatsPanel({ result, nextLesson, onRetry, onBack, onNext }: Stat
           </Button>
         </div>
 
-        {nextLesson && (
+        {recommended && (
           <>
             <Separator className="my-5" />
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Nächste Übung: <span className="text-foreground">{nextLesson.title}</span>
-              </p>
-              <Button onClick={onNext} className="w-full">
+            <p className="mb-3 text-start text-sm font-medium text-muted-foreground">
+              Weiter geht's
+            </p>
+
+            <div className="rounded-lg border-2 border-accent-teal bg-accent-teal/10 p-3 text-start">
+              <div className="mb-1 flex items-center gap-1.5">
+                <SparklesIcon className="size-3.5 text-accent-teal" />
+                <span className="text-xs font-medium text-accent-teal">Empfohlen</span>
+              </div>
+              <p className="font-medium text-foreground">{recommended.title}</p>
+              {recommended.chars.length > 0 && (
+                <p className="font-arabic text-base text-accent-teal">
+                  {recommended.chars.join(" ")}
+                </p>
+              )}
+              {recommended.estimate && (
+                <p className="text-xs text-muted-foreground">{recommended.estimate}</p>
+              )}
+              <Button className="mt-3 w-full" onClick={() => onSelectLesson(recommended.id)}>
                 Übung beginnen
               </Button>
             </div>
+
+            {upcoming.length > 0 && (
+              <div className="mt-2 space-y-1.5">
+                {upcoming.map((lesson) => (
+                  <button
+                    key={lesson.id}
+                    onClick={() => onSelectLesson(lesson.id)}
+                    className="flex w-full items-center justify-between rounded-lg border border-border p-2.5 text-start text-sm text-foreground transition-colors hover:border-accent-teal/50 hover:bg-card"
+                  >
+                    <span>{lesson.title}</span>
+                    <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+                  </button>
+                ))}
+              </div>
+            )}
           </>
         )}
       </CardContent>
