@@ -6,6 +6,7 @@ import { useSettings } from "./hooks/useSettings";
 import { useProgress } from "./hooks/useProgress";
 import { LessonList } from "./components/LessonList";
 import { LessonRunner } from "./components/LessonRunner";
+import { SandboxPage } from "./components/SandboxPage";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { Button } from "./components/ui/button";
 
@@ -80,7 +81,12 @@ function App() {
       </header>
 
       <main className="px-4">
-        {activeLesson ? (
+        {activeLessonId === "sandbox" ? (
+          <SandboxPage
+            fontSizePx={settings.fontSizePx}
+            onBack={() => setActiveLessonId(null)}
+          />
+        ) : activeLesson ? (
           <LessonRunner
             key={activeLessonId}
             lesson={activeLesson}
@@ -95,6 +101,7 @@ function App() {
             recapLesson={recapLesson}
             onSelect={setActiveLessonId}
             onFreePractice={() => setActiveLessonId("free")}
+            onSandbox={() => setActiveLessonId("sandbox")}
           />
         )}
       </main>

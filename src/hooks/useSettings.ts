@@ -5,6 +5,7 @@ const DEFAULT_SETTINGS: Settings = {
   errorMode: "strict",
   showKeyboard: true,
   showFingerHints: true,
+  showSandbox: false,
   fontSizePx: 32,
 };
 

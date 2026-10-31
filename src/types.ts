@@ -12,7 +12,7 @@ export type Finger =
 export interface KeyDef {
   /** KeyboardEvent.code — physical key, independent of active input layout */
   code: string;
-  /** Arabic character(s) this key produces unshifted under the reference layout (Mac Arabic) */
+  /** Arabic character(s) this key produces unshifted under the reference layout (Arabic 101, macOS "Arabic – PC") */
   arabic: string;
   /** Arabic character(s) this key produces when held with Shift */
   shiftArabic?: string;
@@ -29,7 +29,8 @@ export type LessonKind =
   | "letter"
   | "consolidate"
   | "review"
-  | "real-text";
+  | "real-text"
+  | "hand";
 
 export interface Lesson {
   id: string;
@@ -72,6 +73,7 @@ export interface Settings {
   errorMode: ErrorMode;
   showKeyboard: boolean;
   showFingerHints: boolean;
+  showSandbox: boolean;
   fontSizePx: number;
 }
 

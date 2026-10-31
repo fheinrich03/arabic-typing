@@ -63,6 +63,14 @@ export function SettingsPanel({ open, onOpenChange, settings, onChange }: Settin
             />
           </label>
 
+          <label className="flex items-center justify-between">
+            Sandbox-Feld in Lektionen standardmäßig anzeigen
+            <Switch
+              checked={settings.showSandbox}
+              onCheckedChange={(checked) => onChange({ ...settings, showSandbox: checked })}
+            />
+          </label>
+
           <div className="flex flex-col gap-2">
             <span>Schriftgröße ({settings.fontSizePx}px)</span>
             <Slider

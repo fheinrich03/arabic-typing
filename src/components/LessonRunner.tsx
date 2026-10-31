@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, KeyboardIcon, PencilLineIcon } from "lucide-react";
 import type { Lesson, LessonResult, Settings } from "../types";
 import { resolveLessonText } from "../lib/lessonGenerator";
 import { getNextLessons } from "../data/lessons";
 import { useLessonEngine } from "../hooks/useLessonEngine";
 import { KeyboardView } from "./KeyboardView";
 import { TypingArea } from "./TypingArea";
+import { SandboxTyping } from "./SandboxTyping";
 import { StatsPanel } from "./StatsPanel";
 import { Button } from "./ui/button";
 
@@ -25,6 +26,8 @@ export function LessonRunner({
   onNavigate,
 }: LessonRunnerProps) {
   const [attempt, setAttempt] = useState(0);
+  const [sandboxOpen, setSandboxOpen] = useState(settings.showSandbox);
+  const [keyboardOpen, setKeyboardOpen] = useState(settings.showKeyboard);
   const text = useMemo(
     () => resolveLessonText(lesson),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,7 +68,24 @@ export function LessonRunner({
           Übersicht
         </Button>
         <h1 className="font-heading text-base font-medium text-foreground">{lesson.title}</h1>
-        <span className="w-16" />
+        <div className="flex gap-1">
+          <Button
+            variant={keyboardOpen ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setKeyboardOpen((v) => !v)}
+          >
+            <KeyboardIcon />
+            Tastatur
+          </Button>
+          <Button
+            variant={sandboxOpen ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setSandboxOpen((v) => !v)}
+          >
+            <PencilLineIcon />
+            Sandbox
+          </Button>
+        </div>
       </div>
 
       <TypingArea
@@ -78,7 +98,9 @@ export function LessonRunner({
         onChar={engine.typeChar}
       />
 
-      {settings.showKeyboard && (
+      {sandboxOpen && <SandboxTyping fontSizePx={settings.fontSizePx} variant="embedded" />}
+
+      {keyboardOpen && (
         <KeyboardView
           text={text}
           currentIndex={engine.currentIndex}

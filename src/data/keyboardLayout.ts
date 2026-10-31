@@ -1,8 +1,9 @@
 import type { KeyDef } from "../types";
 
 /**
- * Reference layout: macOS "Arabic" keyboard (base letters match Windows
- * "Arabic (101)"). Used to look up which physical key + finger produces a
+ * Reference layout: the standard Arabic PC layout, officially "Arabic (101)"
+ * on Windows. On macOS it is the input source "Arabic – PC" ("Arabisch – PC"
+ * in German), not Apple's own "Arabic" layout. Used to look up which physical key + finger produces a
  * given Arabic character, for the on-screen keyboard and finger hints, and
  * to translate physical keydowns into Arabic characters directly (see
  * CODE_TO_ARABIC / CODE_TO_ARABIC_SHIFT) — the learner never needs an
@@ -10,8 +11,8 @@ import type { KeyDef } from "../types";
  *
  * Shift-layer mapping (hamza/alif forms, ligatures, diacritics, digits,
  * punctuation) per the standard Arabic 101 layout; the Shadda position
- * (Backquote+Shift) is a best-effort placement, unverified against a real
- * Mac — flag if it doesn't match your keyboard.
+ * (Backquote+Shift) is a best-effort placement, unverified against
+ * "Arabic – PC" on a real Mac — flag if it doesn't match your keyboard.
  */
 export const NUMBER_ROW: KeyDef[] = [
   { code: "Backquote", arabic: "ذ", shiftArabic: "ّ", finger: "l-pinky", row: -1 },

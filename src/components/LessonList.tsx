@@ -1,4 +1,4 @@
-import { Dice5Icon, GamepadIcon } from "lucide-react";
+import { Dice5Icon, GamepadIcon, PencilLineIcon } from "lucide-react";
 import { CHAPTERS, LESSONS_BY_ID } from "../data/lessons";
 import type { Lesson, LessonResult, Progress } from "../types";
 import { Card } from "./ui/card";
@@ -9,6 +9,7 @@ interface LessonListProps {
   recapLesson: Lesson;
   onSelect: (lessonId: string) => void;
   onFreePractice: () => void;
+  onSandbox: () => void;
 }
 
 interface LessonCardProps {
@@ -69,16 +70,31 @@ function LessonCard({ lesson, result, disabled, onSelect }: LessonCardProps) {
   );
 }
 
-export function LessonList({ progress, recapLesson, onSelect, onFreePractice }: LessonListProps) {
+export function LessonList({
+  progress,
+  recapLesson,
+  onSelect,
+  onFreePractice,
+  onSandbox,
+}: LessonListProps) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <button
-        onClick={onFreePractice}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-4 text-center text-muted-foreground transition-colors hover:border-accent-teal hover:text-foreground"
-      >
-        <Dice5Icon className="size-5 text-accent-teal" />
-        Freies Training — zufälliger Übungstext mit allen Buchstaben
-      </button>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button
+          onClick={onFreePractice}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-4 text-center text-muted-foreground transition-colors hover:border-accent-teal hover:text-foreground"
+        >
+          <Dice5Icon className="size-5 text-accent-teal" />
+          Freies Training — zufälliger Übungstext mit allen Buchstaben
+        </button>
+        <button
+          onClick={onSandbox}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-4 text-center text-muted-foreground transition-colors hover:border-accent-teal hover:text-foreground"
+        >
+          <PencilLineIcon className="size-5 text-accent-teal" />
+          Sandbox — frei tippen ohne Textvorgabe
+        </button>
+      </div>
 
       <Accordion multiple defaultValue={CHAPTERS.map((c) => c.id)}>
         {CHAPTERS.map((chapter) => {
