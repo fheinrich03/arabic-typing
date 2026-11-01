@@ -28,6 +28,8 @@ export function LessonRunner({
   const [attempt, setAttempt] = useState(0);
   const [sandboxOpen, setSandboxOpen] = useState(settings.showSandbox);
   const [keyboardOpen, setKeyboardOpen] = useState(settings.showKeyboard);
+  useEffect(() => setSandboxOpen(settings.showSandbox), [settings.showSandbox]);
+  useEffect(() => setKeyboardOpen(settings.showKeyboard), [settings.showKeyboard]);
   const text = useMemo(
     () => resolveLessonText(lesson),
     // eslint-disable-next-line react-hooks/exhaustive-deps

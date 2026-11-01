@@ -7,6 +7,8 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./
 interface LessonListProps {
   progress: Progress;
   recapLesson: Lesson;
+  openChapterIds: string[];
+  onOpenChapterIdsChange: (chapterIds: string[]) => void;
   onSelect: (lessonId: string) => void;
   onFreePractice: () => void;
   onSandbox: () => void;
@@ -73,6 +75,8 @@ function LessonCard({ lesson, result, disabled, onSelect }: LessonCardProps) {
 export function LessonList({
   progress,
   recapLesson,
+  openChapterIds,
+  onOpenChapterIdsChange,
   onSelect,
   onFreePractice,
   onSandbox,
@@ -96,7 +100,7 @@ export function LessonList({
         </button>
       </div>
 
-      <Accordion multiple defaultValue={CHAPTERS.map((c) => c.id)}>
+      <Accordion multiple value={openChapterIds} onValueChange={onOpenChapterIdsChange}>
         {CHAPTERS.map((chapter) => {
           const nonSideQuestIds = chapter.lessonIds.filter(
             (id) => !LESSONS_BY_ID[id].isSideQuest,

@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SettingsIcon } from "lucide-react";
-import { LESSONS, LESSONS_BY_ID, BASE_LETTERS } from "./data/lessons";
+import { CHAPTERS, LESSONS, LESSONS_BY_ID, BASE_LETTERS } from "./data/lessons";
 import type { Lesson } from "./types";
 import { useSettings } from "./hooks/useSettings";
 import { useProgress } from "./hooks/useProgress";
@@ -24,6 +24,19 @@ function App() {
   const { progress, recordResult } = useProgress();
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [openChapterIds, setOpenChapterIds] = useState<string[]>(() =>
+    CHAPTERS.map((c) => c.id),
+  );
+  const listScrollYRef = useRef(0);
+
+  const openLesson = (lessonId: string) => {
+    if (activeLessonId === null) listScrollYRef.current = window.scrollY;
+    setActiveLessonId(lessonId);
+  };
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, activeLessonId === null ? listScrollYRef.current : 0);
+  }, [activeLessonId]);
 
   const learnedLetters = useMemo(() => {
     const seen = new Set<string>();
@@ -93,15 +106,17 @@ function App() {
             settings={settings}
             onFinish={recordResult}
             onBack={() => setActiveLessonId(null)}
-            onNavigate={setActiveLessonId}
+            onNavigate={openLesson}
           />
         ) : (
           <LessonList
             progress={progress}
             recapLesson={recapLesson}
-            onSelect={setActiveLessonId}
-            onFreePractice={() => setActiveLessonId("free")}
-            onSandbox={() => setActiveLessonId("sandbox")}
+            openChapterIds={openChapterIds}
+            onOpenChapterIdsChange={setOpenChapterIds}
+            onSelect={openLesson}
+            onFreePractice={() => openLesson("free")}
+            onSandbox={() => openLesson("sandbox")}
           />
         )}
       </main>
