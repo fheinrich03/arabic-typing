@@ -1,5 +1,6 @@
 import type { GeneratorConfig, Lesson } from "../types";
 import { WORDS } from "../data/words";
+import { isAllowedAt, isCombining, takesMarks, type WordPosition } from "../data/charRules";
 
 function pickWeighted(letters: string[], weights: Record<string, number>): string {
   const total = letters.reduce((sum, l) => sum + (weights[l] ?? 1), 0);
@@ -15,17 +16,38 @@ function usesOnlyLetters(word: string, letters: Set<string>): boolean {
   return [...word].every((ch) => letters.has(ch));
 }
 
-/** Generates a pseudo-word of 2-4 letters from the allowed letter set. */
-function generatePseudoWord(letters: string[], weights: Record<string, number>): string {
-  const length = 2 + Math.floor(Math.random() * 3);
-  let word = "";
-  for (let i = 0; i < length; i++) {
-    word += pickWeighted(letters, weights);
-  }
-  return word;
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
 }
 
-/** Generates a pseudo-word of 2-3 (base letter + diacritic mark) pairs. */
+function positionOf(index: number, length: number): WordPosition {
+  if (index === 0) return "initial";
+  return index === length - 1 ? "final" : "medial";
+}
+
+/** A mark needs a preceding letter that can carry it; its position is the carrier's. */
+function fitsSlot(char: string, index: number, length: number, prev: string | undefined): boolean {
+  if (!isCombining(char)) return isAllowedAt(char, positionOf(index, length));
+  if (prev === undefined || isCombining(prev) || !takesMarks(prev)) return false;
+  const carrierPosition = index === 1 ? "initial" : positionOf(index, length);
+  return isAllowedAt(char, carrierPosition);
+}
+
+/** Generates a pseudo-word of 2-4 letters from the allowed letter set, respecting CHAR_RULES. */
+function generatePseudoWord(letters: string[], weights: Record<string, number>): string {
+  const length = 2 + Math.floor(Math.random() * 3);
+  const slots: string[] = [];
+  for (let i = 0; i < length; i++) {
+    const candidates = letters.filter((l) => fitsSlot(l, i, length, slots[i - 1]));
+    slots.push(pickWeighted(candidates.length > 0 ? candidates : letters, weights));
+  }
+  return slots.join("");
+}
+
+/**
+ * Generates a pseudo-word of 2-3 (base letter + diacritic mark) pairs. A pair
+ * whose position allows none of the marks gets a bare base letter instead.
+ */
 function generatePseudoPairWord(
   pairBase: string[],
   marks: string[],
@@ -34,9 +56,11 @@ function generatePseudoPairWord(
   const pairs = 2 + Math.floor(Math.random() * 2);
   let word = "";
   for (let i = 0; i < pairs; i++) {
-    const base = pairBase[Math.floor(Math.random() * pairBase.length)];
-    const mark = pickWeighted(marks, weights);
-    word += base + mark;
+    const position = positionOf(i, pairs);
+    const bases = pairBase.filter((b) => takesMarks(b) && isAllowedAt(b, position));
+    const allowedMarks = marks.filter((m) => isAllowedAt(m, position));
+    word += pickRandom(bases);
+    if (allowedMarks.length > 0) word += pickWeighted(allowedMarks, weights);
   }
   return word;
 }

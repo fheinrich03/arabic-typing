@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeftIcon, KeyboardIcon, PencilLineIcon } from "lucide-react";
+import { ArrowLeftIcon, InfoIcon, KeyboardIcon, PencilLineIcon } from "lucide-react";
 import type { Lesson, LessonResult, Settings } from "../types";
 import { resolveLessonText } from "../lib/lessonGenerator";
 import { getNextLessons } from "../data/lessons";
+import { hintsFor } from "../data/charRules";
 import { useLessonEngine } from "../hooks/useLessonEngine";
 import { KeyboardView } from "./KeyboardView";
 import { TypingArea } from "./TypingArea";
@@ -36,6 +37,8 @@ export function LessonRunner({
     [lesson.id, attempt],
   );
   const engine = useLessonEngine(text, settings.errorMode);
+  // Reviews drill every known letter — hints only where letters are introduced.
+  const hints = lesson.kind === "letter" || lesson.kind === "consolidate" ? hintsFor(lesson.chars) : [];
 
   const reportedRef = useRef(false);
   useEffect(() => {
@@ -89,6 +92,17 @@ export function LessonRunner({
           </Button>
         </div>
       </div>
+
+      {hints.length > 0 && (
+        <div className="flex gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+          <InfoIcon className="mt-0.5 size-4 shrink-0" />
+          <ul className="space-y-1">
+            {hints.map((hint) => (
+              <li key={hint}>{hint}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <TypingArea
         text={text}
