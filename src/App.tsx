@@ -9,6 +9,7 @@ import { LessonRunner } from "./components/LessonRunner";
 import { SandboxPage } from "./components/SandboxPage";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { Button } from "./components/ui/button";
+import { Toaster } from "./components/ui/sonner";
 
 const FREE_PRACTICE_LESSON: Lesson = {
   id: "free",
@@ -127,6 +128,8 @@ function App() {
         settings={settings}
         onChange={setSettings}
       />
+
+      <Toaster position="bottom-center" />
     </div>
   );
 }

@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { isCombining } from "../data/charRules";
 import type { WrongKey } from "../hooks/useLessonEngine";
 
-const VISIBLE_MS = 1800;
+const TOAST_ID = "wrong-key";
 
 /** Combining marks (harakat) need a base to render on; spaces are invisible on their own. */
 function displayChar(char: string): string {
@@ -10,41 +10,25 @@ function displayChar(char: string): string {
   return isCombining(char) ? `◌${char}` : char;
 }
 
-export function WrongKeyToast({ wrongKey }: { wrongKey: WrongKey | null }) {
-  const [dismissedId, setDismissedId] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!wrongKey) return;
-    const timeout = setTimeout(() => setDismissedId(wrongKey.id), VISIBLE_MS);
-    return () => clearTimeout(timeout);
-  }, [wrongKey]);
-
-  const visible = wrongKey && wrongKey.id !== dismissedId ? wrongKey : null;
-  if (!visible) return null;
-
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
-    >
-      <div
-        key={visible.id}
-        className="flex items-center gap-4 rounded-xl bg-card px-4 py-2 shadow-lg ring-1 ring-destructive/40 animate-in fade-in slide-in-from-bottom-2"
-      >
+/** Reuses one toast id, so a new mistake replaces the previous toast instead of stacking. */
+export function showWrongKeyToast({ typed, expected }: WrongKey) {
+  toast.custom(
+    () => (
+      <div className="mx-auto flex w-fit items-center gap-4 rounded-xl bg-popover px-4 py-2 text-popover-foreground shadow-lg ring-1 ring-destructive/40">
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
           Getippt
           <span dir="rtl" lang="ar" className="font-arabic text-3xl leading-none text-destructive">
-            {displayChar(visible.typed)}
+            {displayChar(typed)}
           </span>
         </span>
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
           Erwartet
           <span dir="rtl" lang="ar" className="font-arabic text-3xl leading-none text-accent-green">
-            {displayChar(visible.expected)}
+            {displayChar(expected)}
           </span>
         </span>
       </div>
-    </div>
+    ),
+    { id: TOAST_ID, duration: 1800 },
   );
 }

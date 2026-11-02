@@ -9,7 +9,7 @@ import { KeyboardView } from "./KeyboardView";
 import { TypingArea } from "./TypingArea";
 import { SandboxTyping } from "./SandboxTyping";
 import { StatsPanel } from "./StatsPanel";
-import { WrongKeyToast } from "./WrongKeyToast";
+import { showWrongKeyToast } from "./WrongKeyToast";
 import { Button } from "./ui/button";
 
 interface LessonRunnerProps {
@@ -40,6 +40,10 @@ export function LessonRunner({
   const engine = useLessonEngine(text, settings.errorMode);
   // Reviews drill every known letter — hints only where letters are introduced.
   const hints = lesson.kind === "letter" || lesson.kind === "consolidate" ? hintsFor(lesson.chars) : [];
+
+  useEffect(() => {
+    if (engine.wrongKey) showWrongKeyToast(engine.wrongKey);
+  }, [engine.wrongKey]);
 
   const reportedRef = useRef(false);
   useEffect(() => {
@@ -114,8 +118,6 @@ export function LessonRunner({
         active={!engine.isFinished}
         onChar={engine.typeChar}
       />
-
-      <WrongKeyToast wrongKey={engine.wrongKey} />
 
       {sandboxOpen && <SandboxTyping fontSizePx={settings.fontSizePx} variant="embedded" />}
 
