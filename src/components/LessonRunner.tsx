@@ -5,6 +5,8 @@ import { resolveLessonText } from "../lib/lessonGenerator";
 import { getNextLessons } from "../data/lessons";
 import { hintsFor } from "../data/charRules";
 import { useLessonEngine } from "../hooks/useLessonEngine";
+import { rateChars } from "../lib/charAnalysis";
+import { recommendPractice } from "../lib/practiceRecommendations";
 import { KeyboardView } from "./KeyboardView";
 import { TypingArea } from "./TypingArea";
 import { SandboxTyping } from "./SandboxTyping";
@@ -20,6 +22,10 @@ interface LessonRunnerProps {
   onFinish: (result: LessonResult) => void;
   onBack: () => void;
   onNavigate: (lessonId: string) => void;
+  queueNext?: Lesson;
+  queueRemaining: number;
+  onStartQueue: (lessons: Lesson[]) => void;
+  onContinueQueue: () => void;
 }
 
 export function LessonRunner({
@@ -28,6 +34,10 @@ export function LessonRunner({
   onFinish,
   onBack,
   onNavigate,
+  queueNext,
+  queueRemaining,
+  onStartQueue,
+  onContinueQueue,
 }: LessonRunnerProps) {
   const [attempt, setAttempt] = useState(0);
   const [sandboxOpen, setSandboxOpen] = useState(settings.showSandbox);
@@ -60,14 +70,25 @@ export function LessonRunner({
     }
   }, [engine.isFinished, engine.result, lesson.id, onFinish]);
 
+  const ratings = useMemo(
+    () => (engine.isFinished ? rateChars(engine.charStats) : []),
+    [engine.isFinished, engine.charStats],
+  );
+
   if (engine.isFinished && engine.result) {
     return (
       <StatsPanel
         result={{ ...engine.result, lessonId: lesson.id }}
         nextLessons={getNextLessons(lesson.id)}
+        ratings={ratings}
+        practice={recommendPractice(ratings, lesson)}
+        queueNext={queueNext}
+        queueRemaining={queueRemaining}
         onRetry={() => setAttempt((a) => a + 1)}
         onBack={onBack}
         onSelectLesson={onNavigate}
+        onStartQueue={onStartQueue}
+        onContinueQueue={onContinueQueue}
       />
     );
   }

@@ -1,9 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import type { ErrorMode, LessonResult } from "../types";
+import type { CharStat, ErrorMode, LessonResult } from "../types";
 
 export type CharStatus = "pending" | "correct" | "incorrect";
 
 export const PASS_ERROR_RATE = 0.1;
+
+/** Gaps longer than this count as a pause and are left out of per-char timing. */
+export const PAUSE_THRESHOLD_MS = 5000;
 
 export interface WrongKey {
   typed: string;
@@ -19,6 +22,56 @@ interface EngineState {
   finishedAt: number | null;
   lastKeyWasWrong: boolean;
   wrongKey: WrongKey | null;
+  /** Time the cursor last advanced — per-char timing is measured from here. */
+  lastAdvanceAt: number | null;
+  charStats: Record<string, CharStat>;
+}
+
+function emptyStat(): CharStat {
+  return { occurrences: 0, hits: 0, errors: 0, totalMs: 0, timedCount: 0, confusions: {} };
+}
+
+function isTracked(target: string): boolean {
+  return target.trim().length > 0;
+}
+
+function recordHit(
+  stats: Record<string, CharStat>,
+  target: string,
+  elapsedMs: number | null,
+): Record<string, CharStat> {
+  if (!isTracked(target)) return stats;
+  const stat = stats[target] ?? emptyStat();
+  const timed = elapsedMs !== null && elapsedMs <= PAUSE_THRESHOLD_MS;
+  return {
+    ...stats,
+    [target]: {
+      ...stat,
+      occurrences: stat.occurrences + 1,
+      hits: stat.hits + 1,
+      totalMs: stat.totalMs + (timed ? elapsedMs : 0),
+      timedCount: stat.timedCount + (timed ? 1 : 0),
+    },
+  };
+}
+
+function recordMiss(
+  stats: Record<string, CharStat>,
+  target: string,
+  typed: string,
+  advanced: boolean,
+): Record<string, CharStat> {
+  if (!isTracked(target)) return stats;
+  const stat = stats[target] ?? emptyStat();
+  return {
+    ...stats,
+    [target]: {
+      ...stat,
+      occurrences: stat.occurrences + (advanced ? 1 : 0),
+      errors: stat.errors + 1,
+      confusions: { ...stat.confusions, [typed]: (stat.confusions[typed] ?? 0) + 1 },
+    },
+  };
 }
 
 function initialState(length: number): EngineState {
@@ -31,6 +84,8 @@ function initialState(length: number): EngineState {
     finishedAt: null,
     lastKeyWasWrong: false,
     wrongKey: null,
+    lastAdvanceAt: null,
+    charStats: {},
   };
 }
 
@@ -52,15 +107,17 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
         const span = input.length;
         const target = textRef.current.slice(prev.currentIndex, prev.currentIndex + span);
         const isCorrect = input === target;
-        const startedAt = prev.startedAt ?? Date.now();
+        const now = Date.now();
+        const startedAt = prev.startedAt ?? now;
         const keystrokes = prev.keystrokes + 1;
 
         if (isCorrect) {
+          // The very first char has no reference point, so it stays untimed.
+          const elapsedMs = prev.lastAdvanceAt === null ? null : now - prev.lastAdvanceAt;
           const charStates = [...prev.charStates];
           for (let i = 0; i < span; i++) charStates[prev.currentIndex + i] = "correct";
           const currentIndex = prev.currentIndex + span;
-          const finishedAt =
-            currentIndex >= textRef.current.length ? Date.now() : null;
+          const finishedAt = currentIndex >= textRef.current.length ? now : null;
           return {
             ...prev,
             charStates,
@@ -69,6 +126,8 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
             keystrokes,
             finishedAt,
             lastKeyWasWrong: false,
+            lastAdvanceAt: now,
+            charStats: recordHit(prev.charStats, target, elapsedMs),
           };
         }
 
@@ -81,8 +140,7 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
             charStates[prev.currentIndex + i] = "incorrect";
           }
           const currentIndex = prev.currentIndex + span;
-          const finishedAt =
-            currentIndex >= textRef.current.length ? Date.now() : null;
+          const finishedAt = currentIndex >= textRef.current.length ? now : null;
           return {
             ...prev,
             charStates,
@@ -93,6 +151,8 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
             finishedAt,
             lastKeyWasWrong: true,
             wrongKey,
+            lastAdvanceAt: now,
+            charStats: recordMiss(prev.charStats, target, input, true),
           };
         }
 
@@ -104,6 +164,7 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
           errorCount,
           lastKeyWasWrong: true,
           wrongKey,
+          charStats: recordMiss(prev.charStats, target, input, false),
         };
       });
     },
@@ -132,6 +193,7 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
     errorCount: state.errorCount,
     lastKeyWasWrong: state.lastKeyWasWrong,
     wrongKey: state.wrongKey,
+    charStats: state.charStats,
     isFinished: state.finishedAt !== null,
     result,
     typeChar,

@@ -1,6 +1,10 @@
-import { ChevronRightIcon, SparklesIcon } from "lucide-react";
+import { ChevronRightIcon, ListOrderedIcon, SparklesIcon, TargetIcon } from "lucide-react";
 import type { Lesson, LessonResult } from "../types";
+import type { CharRating } from "../lib/charAnalysis";
+import { displayChar } from "../lib/charAnalysis";
+import { FOCUS_LESSON_ID } from "../lib/practiceRecommendations";
 import { PASS_ERROR_RATE } from "../hooks/useLessonEngine";
+import { CharAnalysis } from "./CharAnalysis";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
@@ -8,22 +12,35 @@ import { Separator } from "./ui/separator";
 interface StatsPanelProps {
   result: LessonResult;
   nextLessons: Lesson[];
+  ratings: CharRating[];
+  practice: Lesson[];
+  /** next lesson of a running practice queue */
+  queueNext?: Lesson;
+  queueRemaining: number;
   onRetry: () => void;
   onBack: () => void;
   onSelectLesson: (lessonId: string) => void;
+  onStartQueue: (lessons: Lesson[]) => void;
+  onContinueQueue: () => void;
 }
 
 export function StatsPanel({
   result,
   nextLessons,
+  ratings,
+  practice,
+  queueNext,
+  queueRemaining,
   onRetry,
   onBack,
   onSelectLesson,
+  onStartQueue,
+  onContinueQueue,
 }: StatsPanelProps) {
   const [recommended, ...upcoming] = nextLessons;
 
   return (
-    <Card className="mx-auto max-w-md text-center">
+    <Card className="mx-auto max-w-lg text-center">
       <CardContent>
         <p
           className={`mb-4 text-lg font-semibold ${
@@ -61,7 +78,63 @@ export function StatsPanel({
           </Button>
         </div>
 
-        {recommended && (
+        {queueNext && (
+          <div className="mt-5 rounded-lg border-2 border-accent-indigo bg-accent-indigo/10 p-3 text-start">
+            <div className="mb-1 flex items-center gap-1.5">
+              <ListOrderedIcon className="size-3.5 text-accent-indigo" />
+              <span className="text-xs font-medium text-accent-indigo">
+                Übungs-Queue · noch {queueRemaining}
+              </span>
+            </div>
+            <p className="font-medium text-foreground">{queueNext.title}</p>
+            <Button className="mt-3 w-full" onClick={onContinueQueue}>
+              Weiter in der Queue
+            </Button>
+          </div>
+        )}
+
+        {ratings.length > 0 && (
+          <>
+            <Separator className="my-5" />
+            <CharAnalysis ratings={ratings} />
+          </>
+        )}
+
+        {practice.length > 0 && (
+          <>
+            <Separator className="my-5" />
+            <div className="space-y-2 text-start">
+              <p className="text-sm font-medium text-muted-foreground">Üben, was noch hakt</p>
+              {practice.map((lesson) => (
+                <Button
+                  key={lesson.id}
+                  variant="outline"
+                  onClick={() => onStartQueue([lesson])}
+                  className="h-auto w-full justify-between p-2.5 hover:border-accent-teal/50"
+                >
+                  <span className="flex items-center gap-2">
+                    {lesson.id === FOCUS_LESSON_ID && (
+                      <TargetIcon className="text-accent-teal" />
+                    )}
+                    {lesson.title}
+                    <span className="font-arabic text-base text-accent-teal">
+                      {lesson.chars.map(displayChar).join(" ")}
+                    </span>
+                  </span>
+                  <ChevronRightIcon className="text-muted-foreground" />
+                </Button>
+              ))}
+              {practice.length > 1 && (
+                <Button className="w-full" onClick={() => onStartQueue(practice)}>
+                  <ListOrderedIcon />
+                  Alle {practice.length} nacheinander üben
+                </Button>
+              )}
+            </div>
+          </>
+        )}
+
+        {recommended && !queueNext && (
           <>
             <Separator className="my-5" />
             <p className="mb-3 text-start text-sm font-medium text-muted-foreground">

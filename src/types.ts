@@ -86,6 +86,21 @@ export interface LessonResult {
   completedAt: number;
 }
 
+/** Per-target typing stats collected during one lesson run. */
+export interface CharStat {
+  /** times the cursor passed this target */
+  occurrences: number;
+  /** correct keystrokes on this target */
+  hits: number;
+  /** wrong keystrokes while this target was expected */
+  errors: number;
+  /** summed time-to-type over timed hits (pauses excluded) */
+  totalMs: number;
+  timedCount: number;
+  /** what was typed instead, with counts */
+  confusions: Record<string, number>;
+}
+
 export interface Progress {
   results: Record<string, LessonResult>;
 }

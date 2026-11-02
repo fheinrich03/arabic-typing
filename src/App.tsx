@@ -24,6 +24,11 @@ function App() {
   const [settings, setSettings] = useSettings();
   const { progress, recordResult } = useProgress();
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  // Bumped on every open so re-opening a generated lesson (same id) still remounts the runner.
+  const [runId, setRunId] = useState(0);
+  // Generated lessons (e.g. the focus drill) that don't live in LESSONS_BY_ID.
+  const [adHocLesson, setAdHocLesson] = useState<Lesson | null>(null);
+  const [practiceQueue, setPracticeQueue] = useState<Lesson[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [openChapterIds, setOpenChapterIds] = useState<string[]>(() =>
     CHAPTERS.map((c) => c.id),
@@ -33,6 +38,25 @@ function App() {
   const openLesson = (lessonId: string) => {
     if (activeLessonId === null) listScrollYRef.current = window.scrollY;
     setActiveLessonId(lessonId);
+    setRunId((id) => id + 1);
+  };
+
+  const startLesson = (lesson: Lesson) => {
+    if (!LESSONS_BY_ID[lesson.id]) setAdHocLesson(lesson);
+    openLesson(lesson.id);
+  };
+
+  const startQueue = ([first, ...rest]: Lesson[]) => {
+    setPracticeQueue(rest);
+    startLesson(first);
+  };
+
+  const continueQueue = () => startQueue(practiceQueue);
+
+  const navigateAway = (lessonId: string | null) => {
+    setPracticeQueue([]);
+    if (lessonId === null) setActiveLessonId(null);
+    else openLesson(lessonId);
   };
 
   useLayoutEffect(() => {
@@ -69,7 +93,9 @@ function App() {
   };
 
   const activeLesson =
-    activeLessonId === "free"
+    adHocLesson && activeLessonId === adHocLesson.id
+      ? adHocLesson
+      : activeLessonId === "free"
       ? FREE_PRACTICE_LESSON
       : activeLessonId === "recap"
         ? recapLesson
@@ -102,12 +128,16 @@ function App() {
           />
         ) : activeLesson ? (
           <LessonRunner
-            key={activeLessonId}
+            key={runId}
             lesson={activeLesson}
             settings={settings}
             onFinish={recordResult}
-            onBack={() => setActiveLessonId(null)}
-            onNavigate={openLesson}
+            onBack={() => navigateAway(null)}
+            onNavigate={navigateAway}
+            queueNext={practiceQueue[0]}
+            queueRemaining={practiceQueue.length}
+            onStartQueue={startQueue}
+            onContinueQueue={continueQueue}
           />
         ) : (
           <LessonList
