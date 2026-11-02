@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { XIcon } from "lucide-react";
 import { CODE_TO_ARABIC, CODE_TO_ARABIC_SHIFT } from "../data/keyboardLayout";
 import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
 
 interface SandboxTypingProps {
   fontSizePx: number;
@@ -55,7 +56,7 @@ export function SandboxTyping({
 
   return (
     <div className="space-y-2">
-      <textarea
+      <Textarea
         ref={textareaRef}
         dir="rtl"
         lang="ar"
@@ -66,8 +67,9 @@ export function SandboxTyping({
           setHasText(e.currentTarget.value.length > 0);
           if (variant === "standalone") autoGrow(e.currentTarget);
         }}
-        className={`font-arabic leading-relaxed resize-none rounded-xl bg-card p-6 text-foreground outline-none ring-1 ring-foreground/10 placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-accent-teal/50 ${
-          variant === "embedded" ? "w-full overflow-y-auto" : "min-h-[50vh] w-full"
+        // Sizing stays manual: fixed rows when embedded, autoGrow() when standalone.
+        className={`field-sizing-fixed resize-none rounded-xl bg-card p-6 font-arabic leading-relaxed md:text-base ${
+          variant === "embedded" ? "overflow-y-auto" : "min-h-[50vh]"
         }`}
         style={{ fontSize: fontSizePx }}
         // eslint-disable-next-line jsx-a11y/no-autofocus
