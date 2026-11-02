@@ -88,12 +88,25 @@ export function keyForChar(char: string): KeyDef | undefined {
   return CHAR_TO_KEY[char] ?? SHIFT_CHAR_TO_KEY[char];
 }
 
-export const CODE_TO_ARABIC: Record<string, string> = Object.fromEntries(
-  ALL_KEYS.filter((k) => k.arabic).map((k) => [k.code, k.arabic]),
+/**
+ * On macOS with an ISO keyboard (e.g. German), browsers report the key below
+ * Esc as "IntlBackslash" instead of "Backquote", so both codes map to that key.
+ */
+const CODE_ALIASES: Record<string, string> = { IntlBackslash: "Backquote" };
+
+function withAliases(map: Record<string, string>): Record<string, string> {
+  const aliased = Object.entries(CODE_ALIASES)
+    .filter(([, target]) => map[target] !== undefined)
+    .map(([alias, target]) => [alias, map[target]]);
+  return { ...map, ...Object.fromEntries(aliased) };
+}
+
+export const CODE_TO_ARABIC: Record<string, string> = withAliases(
+  Object.fromEntries(ALL_KEYS.filter((k) => k.arabic).map((k) => [k.code, k.arabic])),
 );
 
-export const CODE_TO_ARABIC_SHIFT: Record<string, string> = Object.fromEntries(
-  ALL_KEYS.filter((k) => k.shiftArabic).map((k) => [k.code, k.shiftArabic!]),
+export const CODE_TO_ARABIC_SHIFT: Record<string, string> = withAliases(
+  Object.fromEntries(ALL_KEYS.filter((k) => k.shiftArabic).map((k) => [k.code, k.shiftArabic!])),
 );
 
 /** Multi-char keys (ligatures), longest-first, for lookahead matching. */
