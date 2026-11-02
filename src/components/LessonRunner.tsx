@@ -9,6 +9,7 @@ import { KeyboardView } from "./KeyboardView";
 import { TypingArea } from "./TypingArea";
 import { SandboxTyping } from "./SandboxTyping";
 import { StatsPanel } from "./StatsPanel";
+import { WrongKeyToast } from "./WrongKeyToast";
 import { Button } from "./ui/button";
 
 interface LessonRunnerProps {
@@ -113,6 +114,8 @@ export function LessonRunner({
         active={!engine.isFinished}
         onChar={engine.typeChar}
       />
+
+      <WrongKeyToast wrongKey={engine.wrongKey} />
 
       {sandboxOpen && <SandboxTyping fontSizePx={settings.fontSizePx} variant="embedded" />}
 

@@ -5,6 +5,13 @@ export type CharStatus = "pending" | "correct" | "incorrect";
 
 export const PASS_ERROR_RATE = 0.1;
 
+export interface WrongKey {
+  typed: string;
+  expected: string;
+  /** Increments per wrong key so repeating the same mistake still re-triggers the toast. */
+  id: number;
+}
+
 interface EngineState {
   currentIndex: number;
   charStates: CharStatus[];
@@ -13,6 +20,7 @@ interface EngineState {
   startedAt: number | null;
   finishedAt: number | null;
   lastKeyWasWrong: boolean;
+  wrongKey: WrongKey | null;
 }
 
 function initialState(length: number): EngineState {
@@ -24,6 +32,7 @@ function initialState(length: number): EngineState {
     startedAt: null,
     finishedAt: null,
     lastKeyWasWrong: false,
+    wrongKey: null,
   };
 }
 
@@ -31,6 +40,8 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
   const [state, setState] = useState<EngineState>(() => initialState(text.length));
   const textRef = useRef(text);
   textRef.current = text;
+  // Survives reset() so a retry's first mistake never reuses an already-dismissed toast id.
+  const wrongKeyIdRef = useRef(0);
 
   const reset = useCallback(() => {
     setState(initialState(textRef.current.length));
@@ -66,6 +77,11 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
         }
 
         const errorCount = prev.errorCount + 1;
+        const wrongKey: WrongKey = {
+          typed: input,
+          expected: target,
+          id: ++wrongKeyIdRef.current,
+        };
 
         if (errorMode === "permissive") {
           const charStates = [...prev.charStates];
@@ -84,6 +100,7 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
             errorCount,
             finishedAt,
             lastKeyWasWrong: true,
+            wrongKey,
           };
         }
 
@@ -94,6 +111,7 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
           keystrokes,
           errorCount,
           lastKeyWasWrong: true,
+          wrongKey,
         };
       });
     },
@@ -121,6 +139,7 @@ export function useLessonEngine(text: string, errorMode: ErrorMode) {
     charStates: state.charStates,
     errorCount: state.errorCount,
     lastKeyWasWrong: state.lastKeyWasWrong,
+    wrongKey: state.wrongKey,
     isFinished: state.finishedAt !== null,
     result,
     typeChar,
