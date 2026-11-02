@@ -10,7 +10,9 @@ import { TypingArea } from "./TypingArea";
 import { SandboxTyping } from "./SandboxTyping";
 import { StatsPanel } from "./StatsPanel";
 import { showWrongKeyToast } from "./WrongKeyToast";
+import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
+import { Toggle } from "./ui/toggle";
 
 interface LessonRunnerProps {
   lesson: Lesson;
@@ -79,34 +81,28 @@ export function LessonRunner({
         </Button>
         <h1 className="font-heading text-base font-medium text-foreground">{lesson.title}</h1>
         <div className="flex gap-1">
-          <Button
-            variant={keyboardOpen ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setKeyboardOpen((v) => !v)}
-          >
+          <Toggle size="sm" pressed={keyboardOpen} onPressedChange={setKeyboardOpen}>
             <KeyboardIcon />
             Tastatur
-          </Button>
-          <Button
-            variant={sandboxOpen ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setSandboxOpen((v) => !v)}
-          >
+          </Toggle>
+          <Toggle size="sm" pressed={sandboxOpen} onPressedChange={setSandboxOpen}>
             <PencilLineIcon />
             Sandbox
-          </Button>
+          </Toggle>
         </div>
       </div>
 
       {hints.length > 0 && (
-        <div className="flex gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-          <InfoIcon className="mt-0.5 size-4 shrink-0" />
-          <ul className="space-y-1">
-            {hints.map((hint) => (
-              <li key={hint}>{hint}</li>
-            ))}
-          </ul>
-        </div>
+        <Alert className="bg-muted/50">
+          <InfoIcon />
+          <AlertDescription>
+            <ul className="space-y-1">
+              {hints.map((hint) => (
+                <li key={hint}>{hint}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
       )}
 
       <TypingArea
