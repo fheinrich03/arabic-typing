@@ -1,6 +1,7 @@
 import { Dice5Icon, GamepadIcon, PencilLineIcon } from "lucide-react";
 import { CHAPTERS, LESSONS_BY_ID } from "../data/lessons";
 import type { Lesson, LessonResult, Progress } from "../types";
+import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./ui/accordion";
 
@@ -84,20 +85,22 @@ export function LessonList({
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="grid gap-2 sm:grid-cols-2">
-        <button
+        <Button
           onClick={onFreePractice}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-4 text-center text-muted-foreground transition-colors hover:border-accent-teal hover:text-foreground"
+          variant="outline"
+          className="h-auto w-full whitespace-normal rounded-xl border-2 border-dashed p-4 text-muted-foreground hover:border-accent-teal [&_svg:not([class*='size-'])]:size-5"
         >
-          <Dice5Icon className="size-5 text-accent-teal" />
+          <Dice5Icon className="text-accent-teal" />
           Freies Training — zufälliger Übungstext mit allen Buchstaben
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onSandbox}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-4 text-center text-muted-foreground transition-colors hover:border-accent-teal hover:text-foreground"
+          variant="outline"
+          className="h-auto w-full whitespace-normal rounded-xl border-2 border-dashed p-4 text-muted-foreground hover:border-accent-teal [&_svg:not([class*='size-'])]:size-5"
         >
-          <PencilLineIcon className="size-5 text-accent-teal" />
+          <PencilLineIcon className="text-accent-teal" />
           Sandbox — frei tippen ohne Textvorgabe
-        </button>
+        </Button>
       </div>
 
       <Accordion multiple value={openChapterIds} onValueChange={onOpenChapterIdsChange}>

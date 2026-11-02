@@ -90,14 +90,15 @@ export function StatsPanel({
             {upcoming.length > 0 && (
               <div className="mt-2 space-y-1.5">
                 {upcoming.map((lesson) => (
-                  <button
+                  <Button
                     key={lesson.id}
+                    variant="outline"
                     onClick={() => onSelectLesson(lesson.id)}
-                    className="flex w-full items-center justify-between rounded-lg border border-border p-2.5 text-start text-sm text-foreground transition-colors hover:border-accent-teal/50 hover:bg-card"
+                    className="h-auto w-full justify-between p-2.5 hover:border-accent-teal/50"
                   >
-                    <span>{lesson.title}</span>
-                    <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
-                  </button>
+                    {lesson.title}
+                    <ChevronRightIcon className="text-muted-foreground" />
+                  </Button>
                 ))}
               </div>
             )}
