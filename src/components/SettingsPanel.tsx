@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./ui/field";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
@@ -24,35 +25,35 @@ export function SettingsPanel({ open, onOpenChange, settings, onChange }: Settin
           <DialogTitle>Einstellungen</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 pt-2 text-sm text-foreground">
-          <fieldset>
-            <legend className="mb-2 font-medium">Fehler-Modus</legend>
+        <FieldGroup className="pt-2">
+          <FieldSet>
+            <FieldLegend variant="label">Fehler-Modus</FieldLegend>
             <RadioGroup
               value={settings.errorMode}
               onValueChange={(value) =>
                 onChange({ ...settings, errorMode: value as Settings["errorMode"] })
               }
             >
-              <label className="flex items-center gap-2 py-1">
+              <FieldLabel className="font-normal">
                 <RadioGroupItem value="strict" />
                 Streng — erst weiter bei richtigem Zeichen
-              </label>
-              <label className="flex items-center gap-2 py-1">
+              </FieldLabel>
+              <FieldLabel className="font-normal">
                 <RadioGroupItem value="permissive" />
                 Locker — Fehler zählen, weiter geht's trotzdem
-              </label>
+              </FieldLabel>
             </RadioGroup>
-          </fieldset>
+          </FieldSet>
 
-          <label className="flex items-center justify-between">
+          <FieldLabel className="justify-between font-normal">
             Tastaturbild anzeigen
             <Switch
               checked={settings.showKeyboard}
               onCheckedChange={(checked) => onChange({ ...settings, showKeyboard: checked })}
             />
-          </label>
+          </FieldLabel>
 
-          <label className="flex items-center justify-between">
+          <FieldLabel className="justify-between font-normal">
             Finger-Hinweise anzeigen
             <Switch
               checked={settings.showFingerHints}
@@ -61,18 +62,18 @@ export function SettingsPanel({ open, onOpenChange, settings, onChange }: Settin
                 onChange({ ...settings, showFingerHints: checked })
               }
             />
-          </label>
+          </FieldLabel>
 
-          <label className="flex items-center justify-between">
+          <FieldLabel className="justify-between font-normal">
             Sandbox-Feld in Lektionen standardmäßig anzeigen
             <Switch
               checked={settings.showSandbox}
               onCheckedChange={(checked) => onChange({ ...settings, showSandbox: checked })}
             />
-          </label>
+          </FieldLabel>
 
-          <div className="flex flex-col gap-2">
-            <span>Schriftgröße ({settings.fontSizePx}px)</span>
+          <Field>
+            <FieldLabel className="font-normal">Schriftgröße ({settings.fontSizePx}px)</FieldLabel>
             <Slider
               min={20}
               max={56}
@@ -85,8 +86,8 @@ export function SettingsPanel({ open, onOpenChange, settings, onChange }: Settin
                 })
               }
             />
-          </div>
-        </div>
+          </Field>
+        </FieldGroup>
       </DialogContent>
     </Dialog>
   );
