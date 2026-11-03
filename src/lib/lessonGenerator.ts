@@ -3,7 +3,8 @@ import { VOWELED_WORDS, WORD_LIST } from "../data/wordList";
 import { PSEUDO_WORDS } from "../data/pseudoWords";
 import { isCombining } from "../data/charRules";
 
-/** Below this many typeable real words, drills use TypingClub-style patterns instead. */
+/** Below this many typeable real words, drills use TypingClub-style patterns instead.
+ * Mirrored in scripts/word-list/build.py together with FULL_REAL_WORD_POOL. */
 const MIN_WORDS_FOR_WORD_DRILLS = 20;
 /** Real words containing a focus letter needed before no pseudo-words are mixed in. */
 const FULL_REAL_WORD_POOL = 10;
