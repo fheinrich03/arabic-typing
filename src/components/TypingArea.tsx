@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CharStatus } from "../hooks/useLessonEngine";
 import { MousePointerClickIcon } from "lucide-react";
-import { CODE_TO_ARABIC, CODE_TO_ARABIC_SHIFT, resolveNextKey } from "../data/keyboardLayout";
+import { translateKeydown, resolveNextKey } from "../data/keyboardLayout";
 import { Button } from "./ui/button";
 
 interface TypingAreaProps {
@@ -118,7 +118,7 @@ export function TypingArea({
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!active) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    const char = e.shiftKey ? CODE_TO_ARABIC_SHIFT[e.code] : CODE_TO_ARABIC[e.code];
+    const char = translateKeydown(e.code, e.shiftKey);
     if (char === undefined) return;
     if (char === " ") e.preventDefault();
     onChar(char);

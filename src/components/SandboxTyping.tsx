@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { XIcon } from "lucide-react";
-import { CODE_TO_ARABIC, CODE_TO_ARABIC_SHIFT } from "../data/keyboardLayout";
+import { translateKeydown } from "../data/keyboardLayout";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 
@@ -33,7 +33,7 @@ export function SandboxTyping({
     // to the browser's native textarea behavior.
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
-    const char = e.shiftKey ? CODE_TO_ARABIC_SHIFT[e.code] : CODE_TO_ARABIC[e.code];
+    const char = translateKeydown(e.code, e.shiftKey);
     if (char === undefined) return; // Backspace, Enter, arrows, … — native behavior
 
     e.preventDefault();

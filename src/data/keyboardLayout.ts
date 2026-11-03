@@ -10,9 +10,8 @@ import type { KeyDef } from "../types";
  * Arabic input source active in the OS.
  *
  * Shift-layer mapping (hamza/alif forms, ligatures, diacritics, digits,
- * punctuation) per the standard Arabic 101 layout; the Shadda position
- * (Backquote+Shift) is a best-effort placement, unverified against
- * "Arabic – PC" on a real Mac — flag if it doesn't match your keyboard.
+ * punctuation) per the standard Arabic 101 layout, verified against the
+ * macOS "Arabic – PC" Accessibility Keyboard.
  */
 export const NUMBER_ROW: KeyDef[] = [
   { code: "Backquote", arabic: "ذ", shiftArabic: "ّ", finger: "l-pinky", row: -1 },
@@ -35,38 +34,38 @@ export const TOP_ROW: KeyDef[] = [
   { code: "KeyR", arabic: "ق", shiftArabic: "ٌ", finger: "l-index", row: 0 },
   { code: "KeyT", arabic: "ف", shiftArabic: "لإ", finger: "l-index", row: 0 },
   { code: "KeyY", arabic: "غ", shiftArabic: "إ", finger: "r-index", row: 0 },
-  { code: "KeyU", arabic: "ع", finger: "r-index", row: 0 },
-  { code: "KeyI", arabic: "ه", finger: "r-middle", row: 0 },
-  { code: "KeyO", arabic: "خ", finger: "r-ring", row: 0 },
+  { code: "KeyU", arabic: "ع", shiftArabic: "‘", finger: "r-index", row: 0 },
+  { code: "KeyI", arabic: "ه", shiftArabic: "÷", finger: "r-middle", row: 0 },
+  { code: "KeyO", arabic: "خ", shiftArabic: "×", finger: "r-ring", row: 0 },
   { code: "KeyP", arabic: "ح", shiftArabic: "؛", finger: "r-pinky", row: 0 },
-  { code: "BracketLeft", arabic: "ج", finger: "r-pinky", row: 0 },
-  { code: "BracketRight", arabic: "د", finger: "r-pinky", row: 0 },
+  { code: "BracketLeft", arabic: "ج", shiftArabic: "<", finger: "r-pinky", row: 0 },
+  { code: "BracketRight", arabic: "د", shiftArabic: ">", finger: "r-pinky", row: 0 },
 ];
 
 export const HOME_ROW: KeyDef[] = [
   { code: "KeyA", arabic: "ش", shiftArabic: "ِ", finger: "l-pinky", row: 1 },
   { code: "KeyS", arabic: "س", shiftArabic: "ٍ", finger: "l-ring", row: 1 },
-  { code: "KeyD", arabic: "ي", finger: "l-middle", row: 1 },
-  { code: "KeyF", arabic: "ب", finger: "l-index", row: 1 },
+  { code: "KeyD", arabic: "ي", shiftArabic: "]", finger: "l-middle", row: 1 },
+  { code: "KeyF", arabic: "ب", shiftArabic: "[", finger: "l-index", row: 1 },
   { code: "KeyG", arabic: "ل", shiftArabic: "لأ", finger: "l-index", row: 1 },
   { code: "KeyH", arabic: "ا", shiftArabic: "أ", finger: "r-index", row: 1 },
   { code: "KeyJ", arabic: "ت", shiftArabic: "ـ", finger: "r-index", row: 1 },
   { code: "KeyK", arabic: "ن", shiftArabic: "،", finger: "r-middle", row: 1 },
-  { code: "KeyL", arabic: "م", finger: "r-ring", row: 1 },
-  { code: "Semicolon", arabic: "ك", finger: "r-pinky", row: 1 },
-  { code: "Quote", arabic: "ط", finger: "r-pinky", row: 1 },
+  { code: "KeyL", arabic: "م", shiftArabic: "/", finger: "r-ring", row: 1 },
+  { code: "Semicolon", arabic: "ك", shiftArabic: ":", finger: "r-pinky", row: 1 },
+  { code: "Quote", arabic: "ط", shiftArabic: "\"", finger: "r-pinky", row: 1 },
 ];
 
 export const BOTTOM_ROW: KeyDef[] = [
-  { code: "KeyZ", arabic: "ئ", finger: "l-pinky", row: 2 },
+  { code: "KeyZ", arabic: "ئ", shiftArabic: "~", finger: "l-pinky", row: 2 },
   { code: "KeyX", arabic: "ء", shiftArabic: "ْ", finger: "l-ring", row: 2 },
-  { code: "KeyC", arabic: "ؤ", finger: "l-middle", row: 2 },
-  { code: "KeyV", arabic: "ر", finger: "l-index", row: 2 },
+  { code: "KeyC", arabic: "ؤ", shiftArabic: "}", finger: "l-middle", row: 2 },
+  { code: "KeyV", arabic: "ر", shiftArabic: "{", finger: "l-index", row: 2 },
   { code: "KeyB", arabic: "لا", shiftArabic: "لآ", finger: "l-index", row: 2 },
   { code: "KeyN", arabic: "ى", shiftArabic: "آ", finger: "r-index", row: 2 },
-  { code: "KeyM", arabic: "ة", finger: "r-index", row: 2 },
-  { code: "Comma", arabic: "و", finger: "r-middle", row: 2 },
-  { code: "Period", arabic: "ز", finger: "r-ring", row: 2 },
+  { code: "KeyM", arabic: "ة", shiftArabic: "'", finger: "r-index", row: 2 },
+  { code: "Comma", arabic: "و", shiftArabic: ",", finger: "r-middle", row: 2 },
+  { code: "Period", arabic: "ز", shiftArabic: ".", finger: "r-ring", row: 2 },
   { code: "Slash", arabic: "ظ", shiftArabic: "؟", finger: "r-pinky", row: 2 },
 ];
 
@@ -88,26 +87,62 @@ export function keyForChar(char: string): KeyDef | undefined {
   return CHAR_TO_KEY[char] ?? SHIFT_CHAR_TO_KEY[char];
 }
 
-/**
- * On macOS with an ISO keyboard (e.g. German), browsers report the key below
- * Esc as "IntlBackslash" instead of "Backquote", so both codes map to that key.
- */
-const CODE_ALIASES: Record<string, string> = { IntlBackslash: "Backquote" };
+const CODE_TO_ARABIC: Record<string, string> = {
+  ...Object.fromEntries(ALL_KEYS.filter((k) => k.arabic).map((k) => [k.code, k.arabic])),
+  // Extra ISO key left of Z; not shown on the on-screen keyboard.
+  IntlBackslash: ",",
+};
 
-function withAliases(map: Record<string, string>): Record<string, string> {
-  const aliased = Object.entries(CODE_ALIASES)
-    .filter(([, target]) => map[target] !== undefined)
-    .map(([alias, target]) => [alias, map[target]]);
-  return { ...map, ...Object.fromEntries(aliased) };
+const CODE_TO_ARABIC_SHIFT: Record<string, string> = {
+  ...Object.fromEntries(ALL_KEYS.filter((k) => k.shiftArabic).map((k) => [k.code, k.shiftArabic!])),
+  IntlBackslash: "'",
+};
+
+const IS_MAC = /Mac/.test(navigator.userAgent);
+const MAC_ISO_STORAGE_KEY = "macIsoKeyboard";
+
+/**
+ * Browsers on macOS swap the codes of the two ISO-specific keys: the key below
+ * Esc reports "IntlBackslash" and the key left of Z reports "Backquote" (macOS
+ * itself types correctly). An ANSI keyboard never sends "IntlBackslash", so
+ * seeing it once proves an ISO keyboard; from then on (persisted) the codes
+ * are swapped back. Until then, "Backquote" is assumed to be the key below Esc.
+ */
+let macIsoDetected = readMacIsoFlag();
+
+function readMacIsoFlag(): boolean {
+  try {
+    return localStorage.getItem(MAC_ISO_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
 }
 
-export const CODE_TO_ARABIC: Record<string, string> = withAliases(
-  Object.fromEntries(ALL_KEYS.filter((k) => k.arabic).map((k) => [k.code, k.arabic])),
-);
+function markMacIso() {
+  if (macIsoDetected) return;
+  macIsoDetected = true;
+  try {
+    localStorage.setItem(MAC_ISO_STORAGE_KEY, "true");
+  } catch {
+    // Detection still holds for this session.
+  }
+}
 
-export const CODE_TO_ARABIC_SHIFT: Record<string, string> = withAliases(
-  Object.fromEntries(ALL_KEYS.filter((k) => k.shiftArabic).map((k) => [k.code, k.shiftArabic!])),
-);
+function toPhysicalCode(code: string): string {
+  if (!IS_MAC) return code;
+  if (code === "IntlBackslash") {
+    markMacIso();
+    return "Backquote";
+  }
+  if (code === "Backquote" && macIsoDetected) return "IntlBackslash";
+  return code;
+}
+
+/** Translates a physical keydown into the Arabic character(s) it produces. */
+export function translateKeydown(code: string, shift: boolean): string | undefined {
+  const physical = toPhysicalCode(code);
+  return shift ? CODE_TO_ARABIC_SHIFT[physical] : CODE_TO_ARABIC[physical];
+}
 
 /** Multi-char keys (ligatures), longest-first, for lookahead matching. */
 const MULTI_CHAR_KEYS = ALL_KEYS.flatMap((k) => {
