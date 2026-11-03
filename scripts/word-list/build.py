@@ -1,13 +1,23 @@
-"""Builds src/data/wordList.ts from public Arabic frequency sources.
+"""Builds the drill vocabulary from public Arabic frequency sources.
+
+Outputs:
+- src/data/wordList.ts: real words (undiacritized) and fully voweled Quran
+  word forms (for the diacritics unit).
+- src/data/pseudoWords.ts: pronounceable pseudo-words per letter lesson, for
+  lessons whose known letters form too few real words. Every pseudo-word is
+  checked against a large lexicon, so none is accidentally a real word.
+
+Also prints a coverage report: how many real words each letter lesson in
+src/data/lessons.ts can draw from.
 
 Sources (downloaded into .cache/ on first run):
-- Quran: Tanzil Project, "simple-clean" text (https://tanzil.net). Word forms
-  are counted as they appear in the text (with attached clitics like و/ف/ب).
+- Quran: Tanzil Project, "simple" and "simple-clean" text (https://tanzil.net).
+  Word forms are counted as they appear (with attached clitics like و/ف/ب).
 - Modern Standard Arabic: "1000+ most common words" list from Talk In Arabic
   (https://talkinarabic.com/arabic-words/).
 - Leipzig Corpora Collection, Arabic news 2020 and Wikipedia 2021 (300K
-  sentences each, CC BY, https://wortschatz.uni-leipzig.de): only used to drop
-  malformed entries of the MSA list (a word must occur in real text).
+  sentences each, CC BY, https://wortschatz.uni-leipzig.de): drops malformed
+  MSA entries and serves as the lexicon pseudo-words must not occur in.
 
 Usage: python3 scripts/word-list/build.py
 """
@@ -15,6 +25,8 @@ Usage: python3 scripts/word-list/build.py
 import collections
 import html
 import io
+import math
+import random
 import re
 import tarfile
 import urllib.request
@@ -22,9 +34,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CACHE = Path(__file__).resolve().parent / ".cache"
-OUT = ROOT / "src" / "data" / "wordList.ts"
+WORD_LIST_OUT = ROOT / "src" / "data" / "wordList.ts"
+PSEUDO_OUT = ROOT / "src" / "data" / "pseudoWords.ts"
+LESSONS = ROOT / "src" / "data" / "lessons.ts"
 
-QURAN_URL = "https://tanzil.net/pub/download/index.php?quranType=simple-clean&outType=txt-2&agree=true"
+TANZIL_URL = "https://tanzil.net/pub/download/index.php?quranType={}&outType=txt-2&agree=true"
 MSA_URL = "https://talkinarabic.com/arabic-words/"
 LEIPZIG_CORPORA = ["ara_news_2020_300K", "ara_wikipedia_2021_300K"]
 
@@ -33,9 +47,15 @@ MIN_QURAN_COUNT = 3
 # MSA words must occur at least this often in the Leipzig corpora (filters
 # typos and fragments that the source list produces when splitting variants).
 MIN_CORPUS_COUNT = 3
+VOWELED_WORD_LIMIT = 2500
+PSEUDO_WORDS_PER_LESSON = 60
+PSEUDO_CANDIDATES_PER_LESSON = 600
 
+MARKS = "ًٌٍَُِّْ"
 TASHKIL = re.compile("[ً-ْٰـ]")
 ARABIC_WORD = re.compile("^[ء-ي]{2,}$")
+VOWELED_WORD = re.compile(f"^[ء-ي{MARKS}]{{2,}}$")
+LIGATURES = ["لآ", "لأ", "لإ", "لا"]
 
 # Not words: the article and suffixes listed on their own in the MSA list,
 # and the disjointed letters (muqatta'at) opening some surahs.
@@ -47,6 +67,10 @@ EXCLUDED = {
 # Out of context, isolated drill words about killing, cursing or indecency
 # read badly (e.g. "اقتلوا"), so they are left out even when common.
 EXCLUDED_PATTERN = re.compile("قتل|فاحش|سوآت|إرهاب|^(لعنة|اللعنة|لعنهم|لعنت|بغيا)$")
+
+# Vulgar roots and slurs (mostly dialectal, so possibly missing from the
+# news/Wikipedia lexicon). Pseudo-words containing any of them are dropped.
+PSEUDO_BLOCKLIST = ["كس", "زب", "نيك", "نيج", "طيز", "شرموط", "عرص", "قحب", "خول", "منيو", "متناك", "لوطي"]
 
 
 def fetch(url: str, name: str) -> Path:
@@ -63,14 +87,25 @@ def normalize(word: str) -> str:
     return TASHKIL.sub("", word).strip()
 
 
-def quran_counts() -> collections.Counter[str]:
-    counts: collections.Counter[str] = collections.Counter()
-    for line in fetch(QURAN_URL, "quran-simple-clean.txt").read_text("utf-8").splitlines():
+def tokens(word: str) -> list[str]:
+    """Splits a word into keystroke units — lam-alif ligatures are one key."""
+    out: list[str] = []
+    i = 0
+    while i < len(word):
+        ligature = next((l for l in LIGATURES if word.startswith(l, i)), None)
+        out.append(ligature or word[i])
+        i += len(ligature or word[i])
+    return out
+
+
+def quran_words(quran_type: str) -> list[str]:
+    text = fetch(TANZIL_URL.format(quran_type), f"quran-{quran_type}.txt").read_text("utf-8")
+    words: list[str] = []
+    for line in text.splitlines():
         if line.startswith("#") or line.count("|") < 2:
             continue
-        for word in line.split("|", 2)[2].split():
-            counts[normalize(word)] += 1
-    return counts
+        words.extend(line.split("|", 2)[2].split())
+    return words
 
 
 def msa_ranks() -> dict[str, int]:
@@ -98,38 +133,172 @@ def corpus_counts() -> collections.Counter[str]:
             member = tar.getmember(f"{corpus}/{corpus}-words.txt")
             for line in io.TextIOWrapper(tar.extractfile(member), encoding="utf-8"):
                 _, word, count = line.rstrip("\n").split("\t")
-                counts[word] += int(count)
+                counts[normalize(word)] += int(count)
     return counts
 
 
+def is_allowed(word: str) -> bool:
+    return bool(ARABIC_WORD.match(word)) and word not in EXCLUDED and not EXCLUDED_PATTERN.search(word)
+
+
+def rank_words(quran: dict[str, int], msa: dict[str, int]) -> list[str]:
+    """Merges both frequency lists, scaling MSA ranks to the longer Quran list."""
+    quran_rank = {w: i + 1 for i, w in enumerate(sorted(quran, key=lambda w: -quran[w]))}
+    scale = len(quran) / len(msa)
+    words = {w for w in quran.keys() | msa.keys() if is_allowed(w)}
+
+    def score(word: str) -> float:
+        return min(quran_rank.get(word, math.inf), msa.get(word, math.inf) * scale)
+
+    return sorted(words, key=lambda w: (score(w), w))
+
+
+def voweled_words(clean_words: set[str]) -> list[str]:
+    """Most frequent fully voweled Quran forms whose bare form is a list word."""
+    counts: collections.Counter[str] = collections.Counter()
+    for word in quran_words("simple"):
+        # Dagger alif is a Quranic spelling of a long a — plain spelling omits it.
+        word = word.replace("ٰ", "")
+        # Quranic assimilation puts a shadda on a word's first letter
+        # (e.g. "مُّبِين"), which standard spelling never does.
+        if word[1:2] == "\u0651":
+            continue
+        if VOWELED_WORD.match(word) and normalize(word) in clean_words:
+            counts[word] += 1
+    return [w for w, _ in counts.most_common(VOWELED_WORD_LIMIT)]
+
+
+def lesson_letters() -> list[str]:
+    """Letters in the order the course introduces them (units 1-4)."""
+    source = LESSONS.read_text("utf-8")
+    calls = re.findall(r'letterLesson\(\s*"unit[1-4]",\s*"\w+",\s*"[^"]*",\s*"([^"]+)"', source)
+    return calls
+
+
+class BigramModel:
+    def __init__(self, words: list[str]):
+        self.next: dict[str, collections.Counter[str]] = collections.defaultdict(collections.Counter)
+        for word in words:
+            units = ["^", *tokens(word), "$"]
+            for a, b in zip(units, units[1:]):
+                self.next[a][b] += 1
+
+    def score(self, word: str) -> float:
+        """Mean log-probability per transition — higher reads more like Arabic."""
+        units = ["^", *tokens(word), "$"]
+        logs = [math.log(self.next[a][b] / sum(self.next[a].values())) for a, b in zip(units, units[1:])]
+        return sum(logs) / len(logs)
+
+    def sample(self, allowed: set[str], rng: random.Random, max_len: int = 5) -> str | None:
+        units: list[str] = []
+        current = "^"
+        while len(units) <= max_len:
+            options = {u: c for u, c in self.next[current].items() if u in allowed or u == "$"}
+            if len(units) < 2:
+                options.pop("$", None)
+            if not options:
+                return None
+            current = rng.choices(list(options), weights=list(options.values()))[0]
+            if current == "$":
+                return "".join(units)
+            units.append(current)
+        return None
+
+
+def has_letter_run(word: str, length: int = 3) -> bool:
+    return any(word[i] == word[i + 1] == word[i + 2] for i in range(len(word) - length + 1))
+
+
+def pseudo_words(words: list[str], lexicon: set[str]) -> dict[str, list[str]]:
+    """Samples many candidates per lesson and keeps the most Arabic-sounding ones."""
+    model = BigramModel(words)
+    rng = random.Random(42)
+    result: dict[str, list[str]] = {}
+    known: set[str] = set()
+    for letter in lesson_letters():
+        known.add(letter)
+        candidates: set[str] = set()
+        for _ in range(20000):
+            word = model.sample(known, rng)
+            if word is None or letter not in tokens(word) or has_letter_run(word):
+                continue
+            if word in lexicon or any(bad in word for bad in PSEUDO_BLOCKLIST):
+                continue
+            candidates.add(word)
+            if len(candidates) >= PSEUDO_CANDIDATES_PER_LESSON:
+                break
+        best = sorted(candidates, key=model.score, reverse=True)[:PSEUDO_WORDS_PER_LESSON]
+        result[letter] = sorted(best)
+    return result
+
+
+def print_coverage(words: list[str], pseudo: dict[str, list[str]]) -> None:
+    """Real words available per letter lesson: total / containing the new letter."""
+    units = [set(tokens(w)) for w in words]
+    known: set[str] = set()
+    print("\ncoverage per letter lesson (real words total / with new letter / pseudo-words):")
+    for letter in lesson_letters():
+        known.add(letter)
+        typeable = [u for u in units if u <= known]
+        with_letter = sum(1 for u in typeable if letter in u)
+        flag = "  <- patterns/pseudo-words" if len(typeable) < 20 or with_letter < 10 else ""
+        print(f"  {letter}\t{len(typeable)}\t{with_letter}\t{len(pseudo[letter])}{flag}")
+
+
+def ts_string_array(items: list[str]) -> str:
+    return "[" + ", ".join(f'"{w}"' for w in items) + "]"
+
+
 def main() -> None:
-    quran = {w: c for w, c in quran_counts().items() if c >= MIN_QURAN_COUNT}
+    quran = {w: c for w, c in collections.Counter(normalize(w) for w in quran_words("simple-clean")).items() if c >= MIN_QURAN_COUNT}
     corpus = corpus_counts()
     msa = {w: r for w, r in msa_ranks().items() if corpus[w] >= MIN_CORPUS_COUNT}
+    words = rank_words(quran, msa)
+    voweled = voweled_words(set(words))
 
-    words = {
-        w
-        for w in quran.keys() | msa.keys()
-        if ARABIC_WORD.match(w) and w not in EXCLUDED and not EXCLUDED_PATTERN.search(w)
-    }
-    entries = sorted(words, key=lambda w: (-quran.get(w, 0), msa.get(w, 10**6), w))
+    WORD_LIST_OUT.write_text(
+        "\n".join([
+            "// Generated by scripts/word-list/build.py — do not edit by hand.",
+            "// Sources: Quran text from the Tanzil Project (https://tanzil.net),",
+            "// MSA frequency list from Talk In Arabic (https://talkinarabic.com/arabic-words/).",
+            "",
+            "/** [word (undiacritized), MSA frequency rank or 0, occurrences in the Quran] — most common first. */",
+            "export type WordListEntry = [word: string, msaRank: number, quranCount: number];",
+            "",
+            "export const WORD_LIST: WordListEntry[] = [",
+            *(f'  ["{w}", {msa.get(w, 0)}, {quran.get(w, 0)}],' for w in words),
+            "];",
+            "",
+            "/** Fully voweled Quran word forms (bare form in WORD_LIST) — most common first. */",
+            "export const VOWELED_WORDS: string[] = [",
+            *(f'  "{w}",' for w in voweled),
+            "];",
+            "",
+        ]),
+        "utf-8",
+    )
+    print(f"{len(words)} words, {len(voweled)} voweled forms -> {WORD_LIST_OUT.relative_to(ROOT)}")
 
-    lines = [
-        "// Generated by scripts/word-list/build.py — do not edit by hand.",
-        "// Sources: Quran text from the Tanzil Project (https://tanzil.net),",
-        "// MSA frequency list from Talk In Arabic (https://talkinarabic.com/arabic-words/).",
-        "",
-        "/** [word (undiacritized), MSA frequency rank or 0, occurrences in the Quran] */",
-        "export type WordListEntry = [word: string, msaRank: number, quranCount: number];",
-        "",
-        "export const WORD_LIST: WordListEntry[] = [",
-        *(f'  ["{w}", {msa.get(w, 0)}, {quran.get(w, 0)}],' for w in entries),
-        "];",
-        "",
-    ]
-    OUT.write_text("\n".join(lines), "utf-8")
-    both = sum(1 for w in entries if w in quran and w in msa)
-    print(f"{len(entries)} words ({len(msa)} MSA, {len(quran)} Quran, {both} in both) -> {OUT.relative_to(ROOT)}")
+    lexicon = set(corpus) | {normalize(w) for w in quran_words("simple-clean")} | set(msa)
+    pseudo = pseudo_words(words, lexicon)
+    PSEUDO_OUT.write_text(
+        "\n".join([
+            "// Generated by scripts/word-list/build.py — do not edit by hand.",
+            "",
+            "/**",
+            " * Pronounceable pseudo-words per letter lesson: built only from letters known",
+            " * at that lesson, each containing its letter, none found in the Quran or the",
+            " * Leipzig news/Wikipedia corpora (so none is accidentally a real word).",
+            " */",
+            "export const PSEUDO_WORDS: Record<string, string[]> = {",
+            *(f'  "{l}": {ts_string_array(ws)},' for l, ws in pseudo.items()),
+            "};",
+            "",
+        ]),
+        "utf-8",
+    )
+    print(f"{sum(len(v) for v in pseudo.values())} pseudo-words -> {PSEUDO_OUT.relative_to(ROOT)}")
+    print_coverage(words, pseudo)
 
 
 if __name__ == "__main__":
