@@ -15,16 +15,18 @@ import type { KeyDef } from "../types";
  */
 export const NUMBER_ROW: KeyDef[] = [
   { code: "Backquote", arabic: "ذ", shiftArabic: "ّ", finger: "l-pinky", row: -1 },
-  { code: "Digit1", arabic: "١", finger: "l-pinky", row: -1 },
-  { code: "Digit2", arabic: "٢", finger: "l-ring", row: -1 },
-  { code: "Digit3", arabic: "٣", finger: "l-middle", row: -1 },
-  { code: "Digit4", arabic: "٤", finger: "l-index", row: -1 },
-  { code: "Digit5", arabic: "٥", finger: "l-index", row: -1 },
-  { code: "Digit6", arabic: "٦", finger: "r-index", row: -1 },
-  { code: "Digit7", arabic: "٧", finger: "r-index", row: -1 },
-  { code: "Digit8", arabic: "٨", finger: "r-middle", row: -1 },
-  { code: "Digit9", arabic: "٩", finger: "r-ring", row: -1 },
-  { code: "Digit0", arabic: "٠", finger: "r-pinky", row: -1 },
+  { code: "Digit1", arabic: "١", shiftArabic: "!", finger: "l-pinky", row: -1 },
+  { code: "Digit2", arabic: "٢", shiftArabic: "@", finger: "l-ring", row: -1 },
+  { code: "Digit3", arabic: "٣", shiftArabic: "#", finger: "l-middle", row: -1 },
+  { code: "Digit4", arabic: "٤", shiftArabic: "$", finger: "l-index", row: -1 },
+  { code: "Digit5", arabic: "٥", shiftArabic: "%", finger: "l-index", row: -1 },
+  { code: "Digit6", arabic: "٦", shiftArabic: "^", finger: "r-index", row: -1 },
+  { code: "Digit7", arabic: "٧", shiftArabic: "&", finger: "r-index", row: -1 },
+  { code: "Digit8", arabic: "٨", shiftArabic: "*", finger: "r-middle", row: -1 },
+  { code: "Digit9", arabic: "٩", shiftArabic: ")", finger: "r-ring", row: -1 },
+  { code: "Digit0", arabic: "٠", shiftArabic: "(", finger: "r-pinky", row: -1 },
+  { code: "Minus", arabic: "-", shiftArabic: "_", finger: "r-pinky", row: -1 },
+  { code: "Equal", arabic: "=", shiftArabic: "+", finger: "r-pinky", row: -1 },
 ];
 
 export const TOP_ROW: KeyDef[] = [
@@ -54,6 +56,8 @@ export const HOME_ROW: KeyDef[] = [
   { code: "KeyL", arabic: "م", shiftArabic: "/", finger: "r-ring", row: 1 },
   { code: "Semicolon", arabic: "ك", shiftArabic: ":", finger: "r-pinky", row: 1 },
   { code: "Quote", arabic: "ط", shiftArabic: "\"", finger: "r-pinky", row: 1 },
+  // Sits next to Enter on ISO keyboards (as here), above it on ANSI.
+  { code: "Backslash", arabic: "\\", shiftArabic: "|", finger: "r-pinky", row: 1 },
 ];
 
 export const BOTTOM_ROW: KeyDef[] = [
