@@ -66,7 +66,7 @@
 - **Umfang:**
   - 4.565 Wörter ohne Vokalzeichen
   - 2.500 vokalisierte Wortformen
-  - rund 2.200 Kunstwörter
+  - 60 Kunstwörter, nur für Lektionen mit zu wenigen echten Wörtern (aktuell ن)
 - **Ausgeschlossen:**
   - die einzelnen Buchstaben am Anfang mancher Suren (الم, كهيعص, …)
   - Bausteine, die keine eigenen Wörter sind (ال, ات)
