@@ -1,15 +1,20 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 import { CHAPTERS, LESSONS, LESSONS_BY_ID, BASE_LETTERS } from "./data/lessons";
 import type { Lesson } from "./types";
 import { useSettings } from "./hooks/useSettings";
 import { useProgress } from "./hooks/useProgress";
 import { LessonList } from "./components/LessonList";
-import { LessonRunner } from "./components/LessonRunner";
 import { SandboxPage } from "./components/SandboxPage";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { Button } from "./components/ui/button";
+import { Spinner } from "./components/ui/spinner";
 import { Toaster } from "./components/ui/sonner";
+
+// The runner pulls in the drill word lists (several hundred KB), so it is
+// split into its own chunk and preloaded once the lesson list is shown.
+const loadLessonRunner = () => import("./components/LessonRunner");
+const LessonRunner = lazy(() => loadLessonRunner().then((m) => ({ default: m.LessonRunner })));
 
 const FREE_PRACTICE_LESSON: Lesson = {
   id: "free",
@@ -62,6 +67,10 @@ function App() {
   useLayoutEffect(() => {
     window.scrollTo(0, activeLessonId === null ? listScrollYRef.current : 0);
   }, [activeLessonId]);
+
+  useEffect(() => {
+    void loadLessonRunner();
+  }, []);
 
   const learnedLetters = useMemo(() => {
     const seen = new Set<string>();
@@ -127,18 +136,20 @@ function App() {
             onBack={() => setActiveLessonId(null)}
           />
         ) : activeLesson ? (
-          <LessonRunner
-            key={runId}
-            lesson={activeLesson}
-            settings={settings}
-            onFinish={recordResult}
-            onBack={() => navigateAway(null)}
-            onNavigate={navigateAway}
-            queueNext={practiceQueue[0]}
-            queueRemaining={practiceQueue.length}
-            onStartQueue={startQueue}
-            onContinueQueue={continueQueue}
-          />
+          <Suspense fallback={<Spinner className="mx-auto mt-16 size-6 text-muted-foreground" />}>
+            <LessonRunner
+              key={runId}
+              lesson={activeLesson}
+              settings={settings}
+              onFinish={recordResult}
+              onBack={() => navigateAway(null)}
+              onNavigate={navigateAway}
+              queueNext={practiceQueue[0]}
+              queueRemaining={practiceQueue.length}
+              onStartQueue={startQueue}
+              onContinueQueue={continueQueue}
+            />
+          </Suspense>
         ) : (
           <LessonList
             progress={progress}
