@@ -1,6 +1,5 @@
 import type { Chapter, Lesson } from "../types";
 import { REAL_TEXTS } from "./words";
-import { keyForChar } from "./keyboardLayout";
 
 // ---- helpers -------------------------------------------------------------
 
@@ -13,47 +12,17 @@ function push(chapterId: string, lesson: Lesson) {
   (chapterLessonIds[chapterId] ??= []).push(lesson.id);
 }
 
-function weightsFor(newLetters: string[], oldLetters: string[]): Record<string, number> {
-  const weights: Record<string, number> = {};
-  for (const l of newLetters) weights[l] = 3;
-  for (const l of oldLetters) weights[l] = 1;
-  return weights;
-}
-
-function handOf(letter: string): "l" | "r" | undefined {
-  const key = keyForChar(letter);
-  if (!key) return undefined;
-  if (key.finger.startsWith("l-")) return "l";
-  if (key.finger.startsWith("r-")) return "r";
-  return undefined;
-}
-
-// Letters introduced so far in the current hand phase — reset via
-// resetPhase() at the start of each phase so the drill pool for a new letter
-// stays small (this phase's own letters + a couple of others), instead of
-// ballooning to every letter ever learned on that hand.
-let phaseKnown: string[] = [];
-function resetPhase() {
-  phaseKnown = [];
+/** Marks the drilled characters as focus — the generator prefers words containing them. */
+function focusWeights(chars: string[]): Record<string, number> {
+  return Object.fromEntries(chars.map((c) => [c, 3]));
 }
 
 /**
- * Introduces a single new letter, drilled only against the letters already
- * known in this hand phase (plus a couple of recently-known letters from the
- * other hand for light spaced repetition) — keeps the pool small while a
- * new letter is being learned.
+ * Introduces a single new letter. Drill text draws on everything known so
+ * far (so enough real words exist) and favors words containing the new letter.
  */
-function handLetterLesson(
-  chapterId: string,
-  id: string,
-  title: string,
-  letter: string,
-  hand: "l" | "r",
-  goal: number,
-  minutes = "5 min",
-) {
-  const otherHandSample = known.filter((l) => handOf(l) !== hand).slice(-2);
-  const oldLetters = [...phaseKnown, ...otherHandSample];
+function letterLesson(chapterId: string, id: string, title: string, letter: string, goal: number, minutes = "5 min") {
+  known = [...known, letter];
   push(chapterId, {
     id,
     title,
@@ -63,27 +32,19 @@ function handLetterLesson(
     kind: "letter",
     goalAccuracy: goal,
     estimate: minutes,
-    generatorConfig: {
-      letters: [...oldLetters, letter],
-      length: 110,
-      repeatWeight: weightsFor([letter], oldLetters),
-    },
+    generatorConfig: { letters: [...known], length: 110, repeatWeight: focusWeights([letter]) },
   });
-  known = [...known, letter];
-  phaseKnown = [...phaseKnown, letter];
 }
 
-/** Drills all newly-introduced letters of one hand together, plus a few already-known letters from the same hand. */
-function handConsolidateLesson(
+/** Drills a group of recently introduced letters together. */
+function consolidateLesson(
   chapterId: string,
   id: string,
   title: string,
   newLetters: string[],
-  hand: "l" | "r",
   goal: number,
   minutes = "5 min",
 ) {
-  const extra = known.filter((l) => handOf(l) === hand && !newLetters.includes(l)).slice(-3);
   push(chapterId, {
     id,
     title,
@@ -93,7 +54,7 @@ function handConsolidateLesson(
     kind: "consolidate",
     goalAccuracy: goal,
     estimate: minutes,
-    generatorConfig: { letters: [...newLetters, ...extra], length: 150, repeatWeight: weightsFor(newLetters, extra) },
+    generatorConfig: { letters: [...known], length: 150, repeatWeight: focusWeights(newLetters) },
   });
 }
 
@@ -151,92 +112,87 @@ push("unit0", {
   kind: "intro",
   estimate: "~2 min",
   description: "Quick setup & hand-placement basics",
-  generatorConfig: { letters: ["ت", "ن"], length: 20 },
+  generatorConfig: { letters: ["ت", "م"], length: 20 },
 });
 
 // ---- Unit 1: Home Row Foundation ------------------------------------------
-// Right hand's six letters first (one lesson each), consolidated, then
-// reviewed against everything known so far — then the same for the left hand.
+// Right hand's letters first (one lesson each), consolidated, then reviewed
+// against everything known so far — then the same for the left hand. Within
+// each hand, letters come in the order that unlocks the most real words.
+// و and ر sit on the bottom row but are among the most frequent letters, so
+// they join here; ط comes last, since few words use it before the left hand.
 
-resetPhase();
-handLetterLesson("unit1", "e00", "Home Row — Taa (ت)", "ت", "r", 85);
-handLetterLesson("unit1", "e01", "Home Row — Noon (ن)", "ن", "r", 88);
-handLetterLesson("unit1", "e02", "Home Row — Meem (م)", "م", "r", 88);
-handLetterLesson("unit1", "e03", "Home Row — Kaaf (ك)", "ك", "r", 90);
-handLetterLesson("unit1", "e04", "Home Row — Alif (ا)", "ا", "r", 90);
-handLetterLesson("unit1", "e05", "Home Row — Taa (ط)", "ط", "r", 90);
-handConsolidateLesson("unit1", "e06", "Consolidate — Rechte Hand (ت ن م ك ا ط)", ["ت", "ن", "م", "ك", "ا", "ط"], "r", 90);
+letterLesson("unit1", "e00", "Home Row — Taa (ت)", "ت", 85);
+letterLesson("unit1", "e01", "Home Row — Meem (م)", "م", 88);
+letterLesson("unit1", "e02", "Home Row — Alif (ا)", "ا", 88);
+letterLesson("unit1", "e03", "Bottom Row — Waaw (و)", "و", 90);
+letterLesson("unit1", "e04", "Home Row — Noon (ن)", "ن", 90);
+letterLesson("unit1", "e05", "Home Row — Kaaf (ك)", "ك", 90);
+consolidateLesson("unit1", "e06", "Consolidate — Rechte Hand (ت م ا و ن ك)", ["ت", "م", "ا", "و", "ن", "ك"], 90);
 reviewLesson("unit1", "e07", "Review — Nach rechter Hand", 90, "6 min");
 sideQuest("unit1", 1, "E07");
 
-resetPhase();
-handLetterLesson("unit1", "e08", "Home Row — Baa (ب)", "ب", "l", 90);
-handLetterLesson("unit1", "e09", "Home Row — Lam (ل)", "ل", "l", 90);
-handLetterLesson("unit1", "e10", "Home Row — Yaa (ي)", "ي", "l", 90);
-handLetterLesson("unit1", "e11", "Home Row — Seen (س)", "س", "l", 90);
-handLetterLesson("unit1", "e12", "Home Row — Sheen (ش)", "ش", "l", 90);
-handConsolidateLesson("unit1", "e13", "Consolidate — Linke Hand (ب ل ي س ش)", ["ب", "ل", "ي", "س", "ش"], "l", 90);
-reviewLesson("unit1", "e14", "Unit 1 Review — Home Row (11 Letters)", 90, "7 min");
-sideQuest("unit1", 2, "E14");
+letterLesson("unit1", "e08", "Home Row — Lam (ل)", "ل", 90);
+letterLesson("unit1", "e09", "Home Row — Yaa (ي)", "ي", 90);
+letterLesson("unit1", "e10", "Home Row — Baa (ب)", "ب", 90);
+letterLesson("unit1", "e11", "Bottom Row — Raa (ر)", "ر", 90);
+letterLesson("unit1", "e12", "Home Row — Seen (س)", "س", 90);
+letterLesson("unit1", "e13", "Home Row — Sheen (ش)", "ش", 90);
+consolidateLesson("unit1", "e14", "Consolidate — Linke Hand (ل ي ب ر س ش)", ["ل", "ي", "ب", "ر", "س", "ش"], 90);
+letterLesson("unit1", "e15", "Home Row — Taa (ط)", "ط", 90);
+reviewLesson("unit1", "e16", "Unit 1 Review — Home Row (13 Letters)", 90, "7 min");
+sideQuest("unit1", 2, "E16");
 
 // ---- Unit 2: Top Row Extension ---------------------------------------------
 
-resetPhase();
-handLetterLesson("unit2", "e15", "Top Row — Ain (ع)", "ع", "r", 92);
-handLetterLesson("unit2", "e16", "Top Row — Ghain (غ)", "غ", "r", 92);
-handLetterLesson("unit2", "e17", "Top Row — Haa (ه)", "ه", "r", 92);
-handLetterLesson("unit2", "e18", "Top Row — Khaa (خ)", "خ", "r", 92);
-handLetterLesson("unit2", "e19", "Top Row — Haa (ح)", "ح", "r", 92);
-handLetterLesson("unit2", "e20", "Top Row — Jeem (ج)", "ج", "r", 92);
-handLetterLesson("unit2", "e21", "Top Row — Daal (د)", "د", "r", 92);
-handConsolidateLesson(
+letterLesson("unit2", "e17", "Top Row — Ain (ع)", "ع", 92);
+letterLesson("unit2", "e18", "Top Row — Daal (د)", "د", 92);
+letterLesson("unit2", "e19", "Top Row — Haa (ه)", "ه", 92);
+letterLesson("unit2", "e20", "Top Row — Jeem (ج)", "ج", 92);
+letterLesson("unit2", "e21", "Top Row — Haa (ح)", "ح", 92);
+letterLesson("unit2", "e22", "Top Row — Khaa (خ)", "خ", 92);
+letterLesson("unit2", "e23", "Top Row — Ghain (غ)", "غ", 92);
+consolidateLesson(
   "unit2",
-  "e22",
-  "Consolidate — Rechte Hand (ع غ ه خ ح ج د)",
-  ["ع", "غ", "ه", "خ", "ح", "ج", "د"],
-  "r",
+  "e24",
+  "Consolidate — Rechte Hand (ع د ه ج ح خ غ)",
+  ["ع", "د", "ه", "ج", "ح", "خ", "غ"],
   92,
 );
-reviewLesson("unit2", "e23", "Review — Nach rechter Hand (Top Row)", 92, "6 min");
-sideQuest("unit2", 3, "E23");
+reviewLesson("unit2", "e25", "Review — Nach rechter Hand (Top Row)", 92, "6 min");
+sideQuest("unit2", 3, "E25");
 
-resetPhase();
-handLetterLesson("unit2", "e24", "Top Row — Faa (ف)", "ف", "l", 92);
-handLetterLesson("unit2", "e25", "Top Row — Qaaf (ق)", "ق", "l", 92);
-handLetterLesson("unit2", "e26", "Top Row — Thaa (ث)", "ث", "l", 92);
-handLetterLesson("unit2", "e27", "Top Row — Saad (ص)", "ص", "l", 92);
-handLetterLesson("unit2", "e28", "Top Row — Daad (ض)", "ض", "l", 92);
-handConsolidateLesson("unit2", "e29", "Consolidate — Linke Hand (ف ق ث ص ض)", ["ف", "ق", "ث", "ص", "ض"], "l", 92);
-reviewLesson("unit2", "e30", "Unit 2 Review — Cumulative", 92, "7 min");
-sideQuest("unit2", 4, "E30");
+letterLesson("unit2", "e26", "Top Row — Faa (ف)", "ف", 92);
+letterLesson("unit2", "e27", "Top Row — Qaaf (ق)", "ق", 92);
+letterLesson("unit2", "e28", "Top Row — Saad (ص)", "ص", 92);
+letterLesson("unit2", "e29", "Top Row — Daad (ض)", "ض", 92);
+letterLesson("unit2", "e30", "Top Row — Thaa (ث)", "ث", 92);
+consolidateLesson("unit2", "e31", "Consolidate — Linke Hand (ف ق ص ض ث)", ["ف", "ق", "ص", "ض", "ث"], 92);
+reviewLesson("unit2", "e32", "Unit 2 Review — Cumulative", 92, "7 min");
+sideQuest("unit2", 4, "E32");
 
 // ---- Unit 3: Bottom Row -----------------------------------------------------
 // ذ sits on the number row (Backquote), but it's the last unshifted letter
-// left for the left pinky, so it closes out the left-hand phase here.
+// left for the left pinky, so it joins the left-hand phase here.
 
-resetPhase();
-handLetterLesson("unit3", "e31", "Bottom Row — Alif Maqsura (ى)", "ى", "r", 92);
-handLetterLesson("unit3", "e32", "Bottom Row — Taa Marbuta (ة)", "ة", "r", 92);
-handLetterLesson("unit3", "e33", "Bottom Row — Waaw (و)", "و", "r", 92);
-handLetterLesson("unit3", "e34", "Bottom Row — Zaay (ز)", "ز", "r", 92);
-handLetterLesson("unit3", "e35", "Bottom Row — Dhaa (ظ)", "ظ", "r", 92);
-handConsolidateLesson("unit3", "e36", "Consolidate — Rechte Hand (ى ة و ز ظ)", ["ى", "ة", "و", "ز", "ظ"], "r", 92);
-reviewLesson("unit3", "e37", "Review — Nach rechter Hand (Bottom Row)", 92, "6 min");
-sideQuest("unit3", 5, "E37");
+letterLesson("unit3", "e33", "Bottom Row — Taa Marbuta (ة)", "ة", 92);
+letterLesson("unit3", "e34", "Bottom Row — Alif Maqsura (ى)", "ى", 92);
+letterLesson("unit3", "e35", "Bottom Row — Zaay (ز)", "ز", 92);
+letterLesson("unit3", "e36", "Bottom Row — Dhaa (ظ)", "ظ", 92);
+consolidateLesson("unit3", "e37", "Consolidate — Rechte Hand (ة ى ز ظ)", ["ة", "ى", "ز", "ظ"], 92);
+reviewLesson("unit3", "e38", "Review — Nach rechter Hand (Bottom Row)", 92, "6 min");
+sideQuest("unit3", 5, "E38");
 
-resetPhase();
-handLetterLesson("unit3", "e38", "Bottom Row — Raa (ر)", "ر", "l", 92);
-handLetterLesson("unit3", "e39", "Bottom Row — Lam-Alif (لا)", "لا", "l", 92);
-handLetterLesson("unit3", "e40", "Bottom Row — Hamza on Waaw (ؤ)", "ؤ", "l", 92);
-handLetterLesson("unit3", "e41", "Bottom Row — Hamza (ء)", "ء", "l", 92);
-handLetterLesson("unit3", "e42", "Bottom Row — Hamza on Yaa (ئ)", "ئ", "l", 92);
-handLetterLesson("unit3", "e43", "Number Row — Dhal (ذ)", "ذ", "l", 92);
-handConsolidateLesson(
+letterLesson("unit3", "e39", "Number Row — Dhal (ذ)", "ذ", 92);
+letterLesson("unit3", "e40", "Bottom Row — Hamza (ء)", "ء", 92);
+letterLesson("unit3", "e41", "Bottom Row — Lam-Alif (لا)", "لا", 92);
+letterLesson("unit3", "e42", "Bottom Row — Hamza on Yaa (ئ)", "ئ", 92);
+letterLesson("unit3", "e43", "Bottom Row — Hamza on Waaw (ؤ)", "ؤ", 92);
+consolidateLesson(
   "unit3",
   "e44",
-  "Consolidate — Linke Hand (ر لا ؤ ء ئ ذ)",
-  ["ر", "لا", "ؤ", "ء", "ئ", "ذ"],
-  "l",
+  "Consolidate — Linke Hand (ذ ء لا ئ ؤ)",
+  ["ذ", "ء", "لا", "ئ", "ؤ"],
   92,
 );
 reviewLesson("unit3", "e45", "Unit 3 Review — Bottom Row", 92, "7 min");
@@ -244,95 +200,46 @@ sideQuest("unit3", 6, "E45");
 
 // ---- Unit 4: Shift Layer -----------------------------------------------------
 
-resetPhase();
-handLetterLesson("unit4", "e46", "Shift Layer — Hamza on Alif (أ)", "أ", "r", 92);
-handLetterLesson("unit4", "e47", "Shift Layer — Hamza under Alif (إ)", "إ", "r", 92);
-handLetterLesson("unit4", "e48", "Shift Layer — Alif Madda (آ)", "آ", "r", 92);
+letterLesson("unit4", "e46", "Shift Layer — Hamza on Alif (أ)", "أ", 92);
+letterLesson("unit4", "e47", "Shift Layer — Hamza under Alif (إ)", "إ", 92);
+letterLesson("unit4", "e48", "Shift Layer — Alif Madda (آ)", "آ", 92);
 // Tatweel (ـ) has no dedicated lesson — it's a stroke elongation mark, not a
 // letter — but joins the pool once the right-hand shift-layer set is complete.
 known = [...known, "ـ"];
-handConsolidateLesson("unit4", "e49", "Consolidate — Rechte Hand (أ إ آ ـ)", ["أ", "إ", "آ", "ـ"], "r", 92);
+consolidateLesson("unit4", "e49", "Consolidate — Rechte Hand (أ إ آ ـ)", ["أ", "إ", "آ", "ـ"], 92);
 reviewLesson("unit4", "e50", "Review — Nach rechter Hand (Shift Layer)", 92, "6 min");
 sideQuest("unit4", 7, "E50");
 
-resetPhase();
-handLetterLesson("unit4", "e51", "Shift Layer — Lam + Hamza on Alif (لأ)", "لأ", "l", 92);
-handLetterLesson("unit4", "e52", "Shift Layer — Lam + Hamza under Alif (لإ)", "لإ", "l", 92);
-handLetterLesson("unit4", "e53", "Shift Layer — Lam + Alif Madda (لآ)", "لآ", "l", 92);
-handConsolidateLesson("unit4", "e54", "Consolidate — Linke Hand (لأ لإ لآ)", ["لأ", "لإ", "لآ"], "l", 92);
+letterLesson("unit4", "e51", "Shift Layer — Lam + Hamza on Alif (لأ)", "لأ", 92);
+letterLesson("unit4", "e52", "Shift Layer — Lam + Hamza under Alif (لإ)", "لإ", 92);
+letterLesson("unit4", "e53", "Shift Layer — Lam + Alif Madda (لآ)", "لآ", 92);
+consolidateLesson("unit4", "e54", "Consolidate — Linke Hand (لأ لإ لآ)", ["لأ", "لإ", "لآ"], 92);
 reviewLesson("unit4", "e55", "Unit 4 Review — Shift Layer", 92, "7 min");
 sideQuest("unit4", 8, "E55");
 
 // ---- Unit 5: Diacritics ------------------------------------------------------
-// Harakat/tanween are combining marks typed after a base letter — drilled as
-// (base letter + mark) pairs rather than freestanding characters. All of them
+// Harakat/tanween are combining marks typed after a base letter — drilled in
+// voweled Quran words, showing only the marks learned so far. All of them
 // sit on the left hand already, so there's no hand split here.
 
 const baseLettersForDiacritics = [...known];
 
-function diacriticLesson(
-  id: string,
-  title: string,
-  mark: string,
-  goal: number,
-  minutes = "5 min",
-) {
-  const priorMarks = known.filter((c) => !baseLettersForDiacritics.includes(c));
-  const cumulative = [...known, mark];
-  push("unit5", {
-    id,
-    title,
-    chapterId: "unit5",
-    chars: [mark],
-    mode: "chars",
-    kind: "letter",
-    goalAccuracy: goal,
-    estimate: minutes,
-    generatorConfig: {
-      letters: [...priorMarks, mark],
-      pairBase: baseLettersForDiacritics,
-      length: 130,
-      repeatWeight: weightsFor([mark], priorMarks),
-    },
-  });
-  known = cumulative;
-}
-
-function diacriticConsolidate(
-  id: string,
-  title: string,
-  marks: string[],
-  goal: number,
-  minutes = "5 min",
-) {
-  push("unit5", {
-    id,
-    title,
-    chapterId: "unit5",
-    chars: marks,
-    mode: "chars",
-    kind: "consolidate",
-    goalAccuracy: goal,
-    estimate: minutes,
-    generatorConfig: { letters: marks, pairBase: baseLettersForDiacritics, length: 160 },
-  });
-}
-
-diacriticLesson("e56", "Harakat — Fatha (Short a)", "َ", 92);
-diacriticLesson("e57", "Harakat — Kasra (Short i)", "ِ", 92);
-diacriticLesson("e58", "Harakat — Damma (Short u)", "ُ", 92);
-diacriticConsolidate("e59", "Consolidate — Short Vowels", ["َ", "ِ", "ُ"], 92, "6 min");
+letterLesson("unit5", "e56", "Harakat — Fatha (Short a)", "َ", 92);
+letterLesson("unit5", "e57", "Harakat — Kasra (Short i)", "ِ", 92);
+letterLesson("unit5", "e58", "Harakat — Damma (Short u)", "ُ", 92);
+consolidateLesson("unit5", "e59", "Consolidate — Short Vowels", ["َ", "ِ", "ُ"], 92, "6 min");
 sideQuest("unit5", 9, "E59");
-diacriticLesson("e60", "Sukoon — Silent Marker", "ْ", 92);
-diacriticLesson("e61", "Shadda — Doubling Marker", "ّ", 92);
-diacriticConsolidate("e62", "Consolidate — Sukoon & Shadda", ["ْ", "ّ"], 92, "6 min");
+letterLesson("unit5", "e60", "Sukoon — Silent Marker", "ْ", 92);
+letterLesson("unit5", "e61", "Shadda — Doubling Marker", "ّ", 92);
+consolidateLesson("unit5", "e62", "Consolidate — Sukoon & Shadda", ["ْ", "ّ"], 92, "6 min");
 sideQuest("unit5", 10, "E62");
-diacriticLesson("e63", "Tanween — Fathatan (-an)", "ً", 92);
-diacriticLesson("e64", "Tanween — Dammatan (-un)", "ٌ", 92);
-diacriticLesson("e65", "Tanween — Kasratan (-in)", "ٍ", 92);
-diacriticConsolidate("e66", "Consolidate — Tanween", ["ً", "ٌ", "ٍ"], 92, "6 min");
+letterLesson("unit5", "e63", "Tanween — Fathatan (-an)", "ً", 92);
+letterLesson("unit5", "e64", "Tanween — Dammatan (-un)", "ٌ", 92);
+letterLesson("unit5", "e65", "Tanween — Kasratan (-in)", "ٍ", 92);
+consolidateLesson("unit5", "e66", "Consolidate — Tanween", ["ً", "ٌ", "ٍ"], 92, "6 min");
 sideQuest("unit5", 11, "E66");
-diacriticConsolidate(
+consolidateLesson(
+  "unit5",
   "e67",
   "Unit 5 Review — All Diacritics",
   ["َ", "ِ", "ُ", "ْ", "ّ", "ً", "ٌ", "ٍ"],
@@ -345,31 +252,28 @@ sideQuest("unit5", 12, "E67");
 // Digits ١–٥ sit on the left hand, ٦–٠ on the right — same hand-first pattern
 // as the letter units. Punctuation is entirely right-hand.
 
-resetPhase();
-handLetterLesson("unit6", "e68", "Number Row — Digit ١ (One)", "١", "l", 92);
-handLetterLesson("unit6", "e69", "Number Row — Digit ٢ (Two)", "٢", "l", 92);
-handLetterLesson("unit6", "e70", "Number Row — Digit ٣ (Three)", "٣", "l", 92);
-handLetterLesson("unit6", "e71", "Number Row — Digit ٤ (Four)", "٤", "l", 92);
-handLetterLesson("unit6", "e72", "Number Row — Digit ٥ (Five)", "٥", "l", 92);
-handConsolidateLesson("unit6", "e73", "Consolidate — Linke Hand (١ ٢ ٣ ٤ ٥)", ["١", "٢", "٣", "٤", "٥"], "l", 92);
+letterLesson("unit6", "e68", "Number Row — Digit ١ (One)", "١", 92);
+letterLesson("unit6", "e69", "Number Row — Digit ٢ (Two)", "٢", 92);
+letterLesson("unit6", "e70", "Number Row — Digit ٣ (Three)", "٣", 92);
+letterLesson("unit6", "e71", "Number Row — Digit ٤ (Four)", "٤", 92);
+letterLesson("unit6", "e72", "Number Row — Digit ٥ (Five)", "٥", 92);
+consolidateLesson("unit6", "e73", "Consolidate — Linke Hand (١ ٢ ٣ ٤ ٥)", ["١", "٢", "٣", "٤", "٥"], 92);
 reviewLesson("unit6", "e74", "Review — Nach linker Hand (Zahlen)", 92, "6 min");
 sideQuest("unit6", 13, "E74");
 
-resetPhase();
-handLetterLesson("unit6", "e75", "Number Row — Digit ٦ (Six)", "٦", "r", 92);
-handLetterLesson("unit6", "e76", "Number Row — Digit ٧ (Seven)", "٧", "r", 92);
-handLetterLesson("unit6", "e77", "Number Row — Digit ٨ (Eight)", "٨", "r", 92);
-handLetterLesson("unit6", "e78", "Number Row — Digit ٩ (Nine)", "٩", "r", 92);
-handLetterLesson("unit6", "e79", "Number Row — Digit ٠ (Zero)", "٠", "r", 92);
-handConsolidateLesson("unit6", "e80", "Consolidate — Rechte Hand (٦ ٧ ٨ ٩ ٠)", ["٦", "٧", "٨", "٩", "٠"], "r", 92);
+letterLesson("unit6", "e75", "Number Row — Digit ٦ (Six)", "٦", 92);
+letterLesson("unit6", "e76", "Number Row — Digit ٧ (Seven)", "٧", 92);
+letterLesson("unit6", "e77", "Number Row — Digit ٨ (Eight)", "٨", 92);
+letterLesson("unit6", "e78", "Number Row — Digit ٩ (Nine)", "٩", 92);
+letterLesson("unit6", "e79", "Number Row — Digit ٠ (Zero)", "٠", 92);
+consolidateLesson("unit6", "e80", "Consolidate — Rechte Hand (٦ ٧ ٨ ٩ ٠)", ["٦", "٧", "٨", "٩", "٠"], 92);
 reviewLesson("unit6", "e81", "Review — Alle Ziffern ٠–٩", 92, "6 min");
 sideQuest("unit6", 14, "E81");
 
-resetPhase();
-handLetterLesson("unit6", "e82", "Punctuation — Comma (،)", "،", "r", 92);
-handLetterLesson("unit6", "e83", "Punctuation — Semicolon (؛)", "؛", "r", 92);
-handLetterLesson("unit6", "e84", "Punctuation — Question Mark (؟)", "؟", "r", 92);
-handConsolidateLesson("unit6", "e85", "Consolidate — Punctuation", ["،", "؛", "؟"], "r", 92);
+letterLesson("unit6", "e82", "Punctuation — Comma (،)", "،", 92);
+letterLesson("unit6", "e83", "Punctuation — Semicolon (؛)", "؛", 92);
+letterLesson("unit6", "e84", "Punctuation — Question Mark (؟)", "؟", 92);
+consolidateLesson("unit6", "e85", "Consolidate — Punctuation", ["،", "؛", "؟"], 92);
 reviewLesson("unit6", "e86", "Unit 6 Review — Numbers & Punctuation", 92, "7 min");
 sideQuest("unit6", 15, "E86");
 
@@ -408,7 +312,7 @@ export const CHAPTERS: Chapter[] = [
     id: "unit1",
     title: "Unit 1: Home Row Foundation",
     description:
-      "Right hand's home-row letters first, then the left hand — each side consolidated and reviewed before moving on",
+      "Right hand's home-row letters plus و first, then the left hand plus ر — each side consolidated and reviewed before moving on",
     lessonIds: chapterLessonIds.unit1,
   },
   {
@@ -422,7 +326,7 @@ export const CHAPTERS: Chapter[] = [
     id: "unit3",
     title: "Unit 3: Bottom Row",
     description:
-      "Reach down to the bottom row: ى ة و ز ظ on the right hand, ر لا ؤ ء ئ on the left — plus ذ from the number row",
+      "Reach down to the bottom row: ة ى ز ظ on the right hand, ء لا ئ ؤ on the left — plus ذ from the number row",
     lessonIds: chapterLessonIds.unit3,
   },
   {

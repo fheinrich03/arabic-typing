@@ -59,12 +59,11 @@ export interface Chapter {
 }
 
 export interface GeneratorConfig {
+  /** Every character the learner can type at this point, in learning order. */
   letters: string[];
   length: number;
-  wordMode?: boolean;
+  /** Characters weighted above 1 are the drill's focus. */
   repeatWeight?: Record<string, number>;
-  /** Diacritic drills: each token = one letter from this pool + one mark from `letters`. */
-  pairBase?: string[];
 }
 
 export type ErrorMode = "strict" | "permissive";

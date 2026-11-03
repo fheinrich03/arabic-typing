@@ -1,93 +1,213 @@
 import type { GeneratorConfig, Lesson } from "../types";
-import { WORDS } from "../data/words";
-import { isAllowedAt, isCombining, takesMarks, type WordPosition } from "../data/charRules";
+import { VOWELED_WORDS, WORD_LIST } from "../data/wordList";
+import { PSEUDO_WORDS } from "../data/pseudoWords";
+import { isCombining } from "../data/charRules";
 
-function pickWeighted(letters: string[], weights: Record<string, number>): string {
-  const total = letters.reduce((sum, l) => sum + (weights[l] ?? 1), 0);
-  let roll = Math.random() * total;
-  for (const letter of letters) {
-    roll -= weights[letter] ?? 1;
-    if (roll <= 0) return letter;
-  }
-  return letters[letters.length - 1];
+/** Below this many typeable real words, drills use TypingClub-style patterns instead. */
+const MIN_WORDS_FOR_WORD_DRILLS = 20;
+/** Real words containing a focus letter needed before no pseudo-words are mixed in. */
+const FULL_REAL_WORD_POOL = 10;
+/** Share of tokens that target a focus character; the rest review everything known. */
+const FOCUS_SHARE = 0.7;
+/** In pattern drills, share of tokens that are one of the few real words available. */
+const REAL_WORD_SHARE_IN_PATTERNS = 0.3;
+
+const LIGATURES = ["لآ", "لأ", "لإ", "لا"];
+const DIGITS = "٠١٢٣٤٥٦٧٨٩";
+const PUNCTUATION = "،؛؟";
+const TATWEEL = "ـ";
+/** Letters that never join the following letter, so no tatweel can follow them. */
+const NON_JOINING = "اأإآدذرزوؤةىء";
+
+interface Candidate {
+  text: string;
+  weight: number;
 }
 
-function usesOnlyLetters(word: string, letters: Set<string>): boolean {
-  return [...word].every((ch) => letters.has(ch));
+/** Splits text into keystroke units — lam-alif ligatures are a single key. */
+function keystrokeUnits(text: string): string[] {
+  const units: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const unit = LIGATURES.find((l) => text.startsWith(l, i)) ?? text[i];
+    units.push(unit);
+    i += unit.length;
+  }
+  return units;
+}
+
+/** Frequency weight from a most-common-first list position (Zipf-like falloff). */
+function rankWeight(index: number): number {
+  return 1 / Math.sqrt(index + 10);
+}
+
+const REAL_WORDS = WORD_LIST.map(([word], index) => ({
+  word,
+  units: keystrokeUnits(word),
+  weight: rankWeight(index),
+}));
+
+const VOWELED = VOWELED_WORDS.map((word, index) => ({
+  word,
+  bareUnits: keystrokeUnits([...word].filter((c) => !isCombining(c)).join("")),
+  weight: rankWeight(index),
+}));
+
+function pickWeighted<T>(items: T[], weightOf: (item: T) => number): T {
+  const total = items.reduce((sum, item) => sum + weightOf(item), 0);
+  let roll = Math.random() * total;
+  for (const item of items) {
+    roll -= weightOf(item);
+    if (roll <= 0) return item;
+  }
+  return items[items.length - 1];
 }
 
 function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function positionOf(index: number, length: number): WordPosition {
-  if (index === 0) return "initial";
-  return index === length - 1 ? "final" : "medial";
+function pickText(candidates: Candidate[]): string {
+  return pickWeighted(candidates, (c) => c.weight).text;
 }
 
-/** A mark needs a preceding letter that can carry it; its position is the carrier's. */
-function fitsSlot(char: string, index: number, length: number, prev: string | undefined): boolean {
-  if (!isCombining(char)) return isAllowedAt(char, positionOf(index, length));
-  if (prev === undefined || isCombining(prev) || !takesMarks(prev)) return false;
-  const carrierPosition = index === 1 ? "initial" : positionOf(index, length);
-  return isAllowedAt(char, carrierPosition);
+/** Everything the drill can draw from, precomputed once per generated text. */
+interface DrillContext {
+  known: Set<string>;
+  /** Base letters in the order they were learned. */
+  baseLetters: string[];
+  marks: string[];
+  digits: string[];
+  punctuation: string[];
+  words: (Candidate & { units: string[] })[];
+  /** Voweled words showing only the known marks, each with at least one. */
+  voweled: Candidate[];
 }
 
-/** Generates a pseudo-word of 2-4 letters from the allowed letter set, respecting CHAR_RULES. */
-function generatePseudoWord(letters: string[], weights: Record<string, number>): string {
-  const length = 2 + Math.floor(Math.random() * 3);
-  const slots: string[] = [];
-  for (let i = 0; i < length; i++) {
-    const candidates = letters.filter((l) => fitsSlot(l, i, length, slots[i - 1]));
-    slots.push(pickWeighted(candidates.length > 0 ? candidates : letters, weights));
+function buildContext(letters: string[]): DrillContext {
+  const known = new Set(letters);
+  const marks = letters.filter(isCombining);
+  const knownMarks = new Set(marks);
+  const voweled = VOWELED.filter((v) => v.bareUnits.every((u) => known.has(u)))
+    .map((v) => ({
+      text: [...v.word].filter((c) => !isCombining(c) || knownMarks.has(c)).join(""),
+      weight: v.weight,
+    }))
+    .filter((v) => [...v.text].some(isCombining));
+
+  return {
+    known,
+    baseLetters: letters.filter((l) => !isCombining(l) && !DIGITS.includes(l) && !PUNCTUATION.includes(l)),
+    marks,
+    digits: letters.filter((l) => DIGITS.includes(l)),
+    punctuation: letters.filter((l) => PUNCTUATION.includes(l)),
+    words: REAL_WORDS.filter((w) => w.units.every((u) => known.has(u))).map((w) => ({
+      text: w.word,
+      units: w.units,
+      weight: w.weight,
+    })),
+    voweled,
+  };
+}
+
+function isPatternPhase(ctx: DrillContext): boolean {
+  return ctx.words.length < MIN_WORDS_FOR_WORD_DRILLS;
+}
+
+/** TypingClub-style drill: the letter repeated and alternated with the two most recent others. */
+function pattern(letter: string, ctx: DrillContext): string {
+  const others = ctx.baseLetters.filter((l) => l !== letter).slice(-2);
+  if (others.length === 0) return letter.repeat(2 + Math.floor(Math.random() * 3));
+  const o = pickRandom(others);
+  const a = letter;
+  return pickRandom([a + a + a, a + o + a, o + a + o, a + a + o, o + a + a, a + o + a + o]);
+}
+
+function realWord(ctx: DrillContext): string | undefined {
+  return ctx.words.length > 0 ? pickText(ctx.words) : undefined;
+}
+
+/** Real words containing the letter; pseudo-words fill in while too few exist. */
+function letterToken(letter: string, ctx: DrillContext): string {
+  if (isPatternPhase(ctx)) {
+    const words = ctx.words.filter((w) => w.units.includes(letter));
+    return words.length > 0 && Math.random() < REAL_WORD_SHARE_IN_PATTERNS ? pickText(words) : pattern(letter, ctx);
   }
-  return slots.join("");
+  const real = ctx.words.filter((w) => w.units.includes(letter));
+  const pseudo = (PSEUDO_WORDS[letter] ?? []).filter((w) => keystrokeUnits(w).every((u) => ctx.known.has(u)));
+  const realShare = pseudo.length === 0 ? 1 : Math.min(1, real.length / FULL_REAL_WORD_POOL);
+  if (real.length > 0 && Math.random() < realShare) return pickText(real);
+  return pseudo.length > 0 ? pickRandom(pseudo) : pattern(letter, ctx);
+}
+
+function voweledToken(ctx: DrillContext, mark?: string): string | undefined {
+  const candidates = mark ? ctx.voweled.filter((v) => v.text.includes(mark)) : ctx.voweled;
+  return candidates.length > 0 ? pickText(candidates) : undefined;
+}
+
+/** A 1-4 digit number from the known digits, containing `digit` if given. */
+function numberToken(ctx: DrillContext, digit?: string): string {
+  const length = 1 + Math.floor(Math.random() * 4);
+  const digits = Array.from({ length }, () => pickRandom(ctx.digits));
+  if (digit) digits[Math.floor(Math.random() * length)] = digit;
+  // A leading zero only reads naturally as the number zero itself.
+  if (digits.length > 1 && digits[0] === "٠") digits.reverse();
+  return digits.join("");
+}
+
+/** Stretches a word with a tatweel after a letter that joins the next one. */
+function tatweelToken(ctx: DrillContext): string | undefined {
+  const words = ctx.words.filter((w) => w.text.length >= 3 && !NON_JOINING.includes(w.text[0]));
+  if (words.length === 0) return undefined;
+  const word = pickText(words);
+  return word[0] + TATWEEL + word.slice(1);
+}
+
+function focusToken(char: string, ctx: DrillContext): string | undefined {
+  if (isCombining(char)) return voweledToken(ctx, char);
+  if (DIGITS.includes(char)) return numberToken(ctx, char);
+  if (PUNCTUATION.includes(char)) return (realWord(ctx) ?? pattern(ctx.baseLetters[0], ctx)) + char;
+  if (char === TATWEEL) return tatweelToken(ctx);
+  return letterToken(char, ctx);
+}
+
+/** A token reviewing everything known: mostly common words, plus marks, numbers and punctuation once learned. */
+function reviewToken(ctx: DrillContext): string {
+  if (isPatternPhase(ctx)) {
+    const word = Math.random() < REAL_WORD_SHARE_IN_PATTERNS ? realWord(ctx) : undefined;
+    return word ?? pattern(pickRandom(ctx.baseLetters), ctx);
+  }
+  const roll = Math.random();
+  if (ctx.marks.length > 0 && roll < 0.3) return voweledToken(ctx) ?? pickText(ctx.words);
+  if (ctx.digits.length > 0 && roll < 0.45) return numberToken(ctx);
+  if (ctx.punctuation.length > 0 && roll < 0.55) return pickText(ctx.words) + pickRandom(ctx.punctuation);
+  return pickText(ctx.words);
 }
 
 /**
- * Generates a pseudo-word of 2-3 (base letter + diacritic mark) pairs. A pair
- * whose position allows none of the marks gets a bare base letter instead.
- */
-function generatePseudoPairWord(
-  pairBase: string[],
-  marks: string[],
-  weights: Record<string, number>,
-): string {
-  const pairs = 2 + Math.floor(Math.random() * 2);
-  let word = "";
-  for (let i = 0; i < pairs; i++) {
-    const position = positionOf(i, pairs);
-    const bases = pairBase.filter((b) => takesMarks(b) && isAllowedAt(b, position));
-    const allowedMarks = marks.filter((m) => isAllowedAt(m, position));
-    word += pickRandom(bases);
-    if (allowedMarks.length > 0) word += pickWeighted(allowedMarks, weights);
-  }
-  return word;
-}
-
-/**
- * Generates drill text of roughly `length` characters from a config.
- * In word mode, draws real words limited to the allowed letters (falls
- * back to pseudo-words if too few matching words exist).
+ * Generates drill text of roughly `length` characters. Characters weighted
+ * above 1 in `repeatWeight` are the drill's focus: most tokens contain one of
+ * them, the rest review everything in `letters`. Tokens are real words from
+ * the frequency list where possible, pseudo-words while too few real words
+ * contain a new letter, and repetition patterns at the very start of the course.
  */
 export function generateDrillText(config: GeneratorConfig): string {
-  const { letters, length, wordMode = false, repeatWeight = {}, pairBase } = config;
-  if (letters.length === 0) return "";
+  const { letters, length, repeatWeight = {} } = config;
+  const ctx = buildContext(letters);
+  if (ctx.baseLetters.length === 0) return "";
 
-  const letterSet = new Set(letters);
-  const candidateWords = wordMode
-    ? WORDS.filter((w) => usesOnlyLetters(w, letterSet))
-    : [];
+  const focus = letters.filter((l) => (repeatWeight[l] ?? 1) > 1);
+  const nextToken = () => {
+    const target = focus.length > 0 && Math.random() < FOCUS_SHARE ? pickWeighted(focus, (c) => repeatWeight[c]) : undefined;
+    return (target && focusToken(target, ctx)) || reviewToken(ctx);
+  };
 
   const tokens: string[] = [];
   let charCount = 0;
   while (charCount < length) {
-    const token =
-      candidateWords.length > 0
-        ? candidateWords[Math.floor(Math.random() * candidateWords.length)]
-        : pairBase
-          ? generatePseudoPairWord(pairBase, letters, repeatWeight)
-          : generatePseudoWord(letters, repeatWeight);
+    let token = nextToken();
+    // Avoid the same token twice in a row, unless the pool leaves no choice.
+    for (let retry = 0; retry < 5 && token === tokens[tokens.length - 1]; retry++) token = nextToken();
     tokens.push(token);
     charCount += token.length;
   }
